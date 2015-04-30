@@ -1,0 +1,17 @@
+*.log
+*.pot
+*.pyc
+*.pid
+*.DS_Store
+.DS_Store
+DS_Store
+*.pem
+*.db
+.project
+.pydevproject
+.idea/*
+.container-id
+.coverage
+dist/*
+*.egg-info/
+wq

@@ -1,0 +1,135 @@
+user www-data;
+worker_processes 16;
+pid /var/run/nginx.pid;
+daemon off;
+
+events {
+    worker_connections 2000;
+    use epoll;
+    multi_accept on;
+}
+
+worker_rlimit_nofile 100000;
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    sendfile on;
+    tcp_nopush on;
+
+    keepalive_timeout {{ context.keepalive_timeout or 65 }};
+    keepalive_requests 100000;
+    reset_timedout_connection on;
+    client_body_timeout 10;
+    send_timeout 2;
+    tcp_nodelay on;
+
+    log_format combined_forwarded_ip '$remote_addr ($http_x_forwarded_for) - '
+                                     '$remote_user [$time_local]  '
+                                     '"$request" $status $body_bytes_sent '
+                                     '"$http_referer" "$http_user_agent" '
+                                     '"$host" $request_time '
+                                     '$upstream_response_time '
+                                     '"$upstream_addr" $msec';
+
+    access_log /dev/stdout combined_forwarded_ip;
+    error_log /dev/stderr;
+
+    gzip on;
+
+    # Strip nginx version from headers & error pages
+    server_tokens off;
+    # Override "Server" header so that server type doesn't leak.
+    more_set_headers 'Server: ';
+
+    # Set up custom error page for all possible error response codes
+    # (Allows elimination of server type information in error pages)
+    # From http://lxr.nginx.org/source/src/http/ngx_http_special_response.c
+    error_page 400 401 402 403 404 405 406 408 409 410 411 412 413 414 415 416 494 495 496 497 500 501 502 503 504 507 /aurproxy_error.html;
+
+    {% if stats_port %}
+    server {
+        listen {{ proxy_config.stats_port }};
+        location /aurproxy_error.html {
+            internal;
+            echo "Error";
+        }
+        location /aurproxy/status {
+            stub_status on;
+            access_log on;
+            allow 127.0.0.1;
+            deny all;
+        }
+    }
+    {% endif %}
+
+    {% for server in servers %}
+    {% if server.context.overflow_port %}
+    server {
+        listen {{server.context.overflow_port}} default_server;
+        location /aurproxy_error.html {
+            internal;
+            echo "Error";
+        }
+        location / {
+            access_log on;
+            return 502;
+        }
+    }
+    {% endif %}
+    {% for route in server.routes %}
+    upstream {{ server.slug }}{{ route.slug }} {
+        least_conn;
+        {% for endpoint in route.endpoints %}{% if not endpoint.weight %}#{% endif %}server {{ endpoint.host }}:{{ endpoint.port }} weight={{ endpoint.weight }}; # {{ endpoint.audit.render() }}
+        {% endfor %}
+        keepalive 512;
+    }
+    {% endfor %}
+
+    server {
+        {% for port in server.ports %}listen {{ port }} {{'default_server' if server.context.default_server else ''}};
+        {% endfor %}
+
+        server_name {% for host in server.hosts %}{{ host }} {% endfor %};
+
+        proxy_connect_timeout  {{ server.context.proxy_connect_timeout or 60 }};
+        proxy_send_timeout     {{ server.context.proxy_send_timeout or 60 }};
+        proxy_read_timeout     {{ server.context.proxy_read_timeout or 60 }};
+        send_timeout           {{ server.context.send_timeout or 60 }};
+
+        proxy_buffer_size 64k;
+        proxy_buffers 16 16k;
+        large_client_header_buffers 8 32k;
+
+        location /aurproxy_error.html {
+            internal;
+            echo "Error";
+        }
+
+        {% if server.healthcheck_route %}location {{ server.healthcheck_route }} {
+          access_log on;
+          return 200;
+        }
+        {% endif %}
+        {% for blacklisted_location in server.context.location_blacklist %}location {{blacklisted_location}} {
+          deny all;
+        }
+        {% endfor %}
+
+        proxy_http_version 1.1;
+        proxy_set_header  Host            $host;
+        proxy_set_header  X-Real-IP       $remote_addr;
+        proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header  Connection      "";
+        {% for route in server.routes %}
+        {% for location in route.locations %}
+        location {{location}} {
+            proxy_next_upstream off;
+            proxy_pass http://{{ server.slug }}{{ route.slug }};
+        }
+        {% endfor %}
+        {% endfor %}
+    }
+    {% endfor %}
+}

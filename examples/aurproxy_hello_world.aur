@@ -1,0 +1,127 @@
+# Copyright 2015 TellApart, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#####################
+# Process Templates #
+#####################
+_AURPROXY_CMD_BASE = 'cd /opt/aurproxy && python -m "tellapart.aurproxy.command"'
+
+aurproxy_setup_process = Process(
+  name='aurproxy_setup',
+  cmdline= _AURPROXY_CMD_BASE + ' run --setup {{command_args}}')
+
+aurproxy_management_process = Process(
+  name='aurproxy',
+  cmdline= _AURPROXY_CMD_BASE + ' run {{command_args}}')
+
+aurproxy_nginx_process = Process(
+  name='nginx',
+  cmdline='/usr/sbin/nginx -c /etc/nginx/nginx.conf')
+
+
+##################
+# Task Templates #
+##################
+
+aurproxy_task_template = Task(
+  name='aurproxy',
+  resources=Resources(
+    cpu=1,
+    ram=128*MB,
+    disk=1024*MB),
+  processes=[aurproxy_setup_process,
+             aurproxy_management_process,
+             aurproxy_nginx_process],
+  constraints=[Constraint(order=['aurproxy_setup', 'aurproxy']),
+               Constraint(order=['aurproxy_setup', 'nginx'])])
+
+
+#####################
+# Service Templates #
+#####################
+base_aurproxy_service_template = Service(
+  container= Container(
+    docker = Docker(
+      image='{{docker_url}}/{{docker_library}}/{{docker_package}}:{{docker_image_version}}')),
+  constraints={
+    'host': 'limit:1'
+  }
+)
+
+aurproxy_service_template = base_aurproxy_service_template(
+    task=aurproxy_task_template,
+    announce=Announcer())
+
+class ProxyConfiguration(dict):
+  def json_dumps(self):
+    import json
+    return json.dumps(self)
+
+class ProxyServer(dict):
+  pass
+
+class ProxyRoute(dict):
+  pass
+
+class ProxySource(dict):
+  pass
+
+class ProxyContext(dict):
+  pass
+
+############
+# Settings #
+############
+
+#https://docker.tellapart.com/v1/repositories/aurproxy/tags/20150305.0
+docker_settings = dict(
+  docker_url='docker.mydomain.com',
+  docker_library='library',
+  docker_package='aurproxy',
+  docker_image_version='20150430.0'
+)
+
+WEB_ROLE = 'www-data'
+
+AURPROXY_SERVICE = aurproxy_service_template().bind(**docker_settings)
+
+# Job
+jobs = [
+  AURPROXY_SERVICE(
+    environment='devel',
+    cluster = 'devcluster',
+    role=WEB_ROLE,
+    name = 'aurproxy',
+  ).bind(
+    command_args=' --config \'' + \
+                 ProxyConfiguration(
+                   servers=[
+                     ProxyServer(
+                       hosts=["default"],
+                       ports=[8080],
+                       routes=[
+                         ProxyRoute(
+                           locations=['/'],
+                           sources=[
+                             ProxySource(
+                               source_class='tellapart.aurproxy.source.AuroraProxySource',
+                               zk_servers='127.0.0.1:2181',
+                               role=WEB_ROLE,
+                               environment='devel',
+                               job='hello_world',
+                               endpoint='http')])],
+                      context=ProxyContext(
+                        default_server=True,
+                        location_blacklist=["/health", "/quitquitquit", "/abortabortabort"]))]).json_dumps() + '\'')
+]
