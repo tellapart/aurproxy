@@ -26,6 +26,7 @@ from tellapart.aurproxy.app.lifecycle import register_shutdown_handler
 from tellapart.aurproxy.metrics.store import (
   add_publisher,
   set_root_prefix)
+from tellapart.aurproxy.mirror import load_mirror_updater
 from tellapart.aurproxy.proxy import ProxyUpdater
 from tellapart.aurproxy.util import (
   get_logger,
@@ -42,6 +43,10 @@ _DEFAULT_BACKEND = 'nginx'
 _DEFAULT_MAX_UPDATE_FREQUENCY = 10
 _DEFAULT_METRIC_PUBLISHER_CLASS = None
 _DEFAULT_METRIC_PUBLISHER_KWARGS = []
+_DEFAULT_MIRROR_MAX_QPS = 0
+_DEFAULT_MIRROR_MAX_UPDATE_FREQUENCY = 15
+_DEFAULT_MIRROR_PORTS = None
+_DEFAULT_MIRROR_SOURCE = None
 _DEFAULT_REGISTRATION_CLASS = None
 _DEFAULT_REGISTRATION_KWARGS = []
 _DEFAULT_UPDATE_PERIOD = 2
@@ -58,6 +63,10 @@ def run(management_port,
         registration_arg=_DEFAULT_REGISTRATION_KWARGS,
         metric_publisher_class=_DEFAULT_METRIC_PUBLISHER_CLASS,
         metric_publisher_arg=_DEFAULT_METRIC_PUBLISHER_KWARGS,
+        mirror_source=_DEFAULT_MIRROR_SOURCE,
+        mirror_ports=_DEFAULT_MIRROR_PORTS,
+        mirror_max_qps=_DEFAULT_MIRROR_MAX_QPS,
+        mirror_max_update_frequency=_DEFAULT_MIRROR_MAX_UPDATE_FREQUENCY,
         sentry_dsn=None,
         setup=False):
   """Run the Aurproxy load balancer manager.
@@ -84,6 +93,13 @@ def run(management_port,
       kwarg pairs.
       Example:
         ["source=cluster.role.environment.job"]
+    mirror_source - JSON String - Source configuration for gor repeater to
+      which http traffic should be mirrored.
+    mirror_ports - Comma seperated integer string - Local ports to mirror.
+      Example: "8080,8081"
+    mirror_max_qps - Max QPS to mirror to gor repeater.
+    mirror_max_update_frequency - integer - number of seconds between updates
+      of mirror configuration.
     sentry_dsn - str - Sentry DSN for error logging.
     setup - bool - When run in setup mode, aurproxy will render a configuration
      for the managed load balancer once and then exit. Run aurproxy once in
@@ -101,8 +117,18 @@ def run(management_port,
   proxy_updater = ProxyUpdater(backend, proxy_config, update_period,
                                max_update_frequency)
 
+  # Set up mirroring
+  mirror_updater = None
+  if mirror_source:
+    mirror_updater = load_mirror_updater(mirror_source,
+                                         mirror_ports,
+                                         mirror_max_qps,
+                                         mirror_max_update_frequency)
+
   if setup:
     proxy_updater.set_up()
+    if mirror_updater:
+      mirror_updater.set_up()
   else:
     # Set up metrics
     set_root_prefix('aurproxy')
@@ -125,8 +151,10 @@ def run(management_port,
         logger.exception('Registration failure.')
         raise
 
-    # Start the proxy updater.
+    # Start the updaters.
     proxy_updater.start(weight_adjustment_delay_seconds)
+    if mirror_updater:
+      mirror_updater.start()
 
     # Set up management application
     app = Flask(__name__)

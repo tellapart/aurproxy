@@ -21,6 +21,8 @@ service discovery mechanism.
 - Delayed start for new endpoints
 - Traffic ramping for new endpoints
 - Simple overload protection
+- Simple HTTP traffic mirroring
+  - Using [gor](https://github.com/buger/gor)
 - Route HTTP requests to a pool of endpoints from multiple jobs
 - Route HTTP requests based on HTTP route
 - Route HTTP requests based on HTTP "Host" header
@@ -110,6 +112,32 @@ Replace your zk_servers, role, environment, job, etc. in the value of the
   isn't in your ephemeral port range and then set your job up to be run in a
   dedicated group with a "host" constraint value of "limit:1" in order to
   ensure only 1 aurproxy task instance per slave for that job.
+
+## Traffic Mirroring:
+
+Aurproxy HTTP traffic mirroring uses [gor](https://github.com/buger/gor). It is
+set up to replicate a fixed number of queries per second over a TCP stream to
+one or more gor replication servers. Aurproxy finds gor instances using
+sources, and will update its gor command line to add new endpoints as they
+appear and remove old ones as they disappear.
+
+To use traffic mirroring:
+
+1. Set up a gor replication server. It can be but doesn't have to be in Aurora.
+2. Add a gor_process to your Aurproxy task definition.
+
+        # max_failures=0 is important:
+        # aurproxy kills the gor process when it updates mirror.sh,
+        # and max_failures=0 means that Aurora won't treat the task as
+        # unhealthy after some number of gor process restarts.
+        gor_process = Process(
+          name='gor',
+          cmdline='/etc/aurproxy/gor/mirror.sh',
+          max_failures=0)
+
+3. Pass values for mirror_source (an aurproxy source configured to point to
+   your gor replication server(s)), mirror_ports, mirror_max_qps, and
+   mirror_max_update_frequency into aurproxy when starting it.
 
 
 ## Lifecycle

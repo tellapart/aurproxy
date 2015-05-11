@@ -14,6 +14,16 @@ RUN apt-get update
 # Install python prerequisites
 RUN apt-get install -y python-pip python-dev build-essential
 
+# Install go
+RUN apt-get install -y golang
+
+# Install gor
+ENV GOPATH=/opt/go
+RUN mkdir -p $GOPATH \
+ && go get github.com/buger/gor \
+ && cd $GOPATH/src/github.com/buger/gor \
+ && go build
+
 # Install nginx
 ENV NGX_REQS openssl libssl1.0.0 libxml2 libxslt1.1 libgeoip1 libpcre3 zlib1g
 RUN apt-get update \
@@ -89,7 +99,6 @@ RUN mkdir -p /etc/nginx/sites-enabled \
  && mkdir -p /etc/nginx/sites-available \
  && mkdir -p /var/lib/nginx
 
-
 ######
 # System prerequisite configuration
 ######
@@ -104,6 +113,8 @@ RUN rm /etc/nginx/nginx.conf
 RUN mkdir -p /etc/aurproxy/nginx
 RUN ln -sf /etc/aurproxy/nginx/nginx.conf /etc/nginx
 
+# Create dynamic gor config location
+RUN mkdir -p /etc/aurproxy/gor
 
 ######
 # Application prerequisite installation

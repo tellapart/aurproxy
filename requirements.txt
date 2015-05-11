@@ -6,5 +6,6 @@ gevent==1.0.1
 Jinja2==2.7.3
 kazoo==2.0
 librato-metrics==0.7.0
+psutil==2.2.1
 raven==5.1.1
 requests==2.5.1
