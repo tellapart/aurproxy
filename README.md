@@ -367,7 +367,8 @@ values (EG: "default_server": True)
                                 "share_adjusters": [
                                     {
                                         "share_adjuster_class": "aurproxy.share.adjusters.RampingShareAdjuster",
-                                        "seconds": 60,
+                                        "ramp_seconds": 60,
+                                        "ramp_delay": 10,
                                         "update_frequency": 10,
                                         "curve": "linear"
                                     },
