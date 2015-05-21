@@ -123,5 +123,5 @@ jobs = [
                                endpoint='http')])],
                       context=ProxyContext(
                         default_server=True,
-                        location_blacklist=["/health", "/quitquitquit", "/abortabortabort"]))]).json_dumps() + '\'')
+                        location_blacklist=["/health", "/quitquitquit", "/abortabortabort"]))]).json_dumps() + '\'' + ' --management-port=31325' )
 ]
