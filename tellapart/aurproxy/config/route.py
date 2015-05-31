@@ -20,6 +20,10 @@ class ProxyRoute(object):
     self._source_group_manager = source_group_manager
 
   @property
+  def blueprints(self):
+    return self._source_group_manager.blueprints
+
+  @property
   def locations(self):
     return self._locations
 

@@ -27,6 +27,7 @@ class StaticProxySource(ProxySource):
     self._name = kwargs.get('name')
     self._host = kwargs.get('host')
     self._port = kwargs.get('port')
+    self._endpoint = SourceEndpoint(self._host, self._port)
     err_fmt = '"{0}" required on StaticProxySource'
     if not self._name:
       raise AurProxyConfigException(err_fmt.format('name'))
@@ -36,10 +37,17 @@ class StaticProxySource(ProxySource):
       raise AurProxyConfigException(err_fmt.format('port'))
 
   @property
+  def blueprint(self):
+    return None
+
+  @property
   def slug(self):
     return '{0}__{1}__{2}'.format(self._name,
                                   self._host,
                                   self._port)
 
   def start(self):
-    self.add(SourceEndpoint(self._host, self._port))
+    self.add(self._endpoint)
+
+  def stop(self):
+    self.remove(self._endpoint)

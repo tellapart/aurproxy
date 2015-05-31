@@ -39,11 +39,14 @@ class MirrorUpdaterTests(unittest.TestCase):
       "port": 80
     })
 
+    template_path = '../templates/gor/mirror.sh.template'
+
     # Load up a mirror updater
-    mirror_updater = load_mirror_updater(source_config=static_source_config,
+    mirror_updater = load_mirror_updater(source=static_source_config,
                                          ports='8080,8081',
                                          max_qps=100,
-                                         max_update_frequency=15)
+                                         max_update_frequency=15,
+                                         command_template_path=template_path)
 
     # Patch in the dummy update function
     funcType = type(MirrorUpdater.update)

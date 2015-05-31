@@ -57,6 +57,13 @@ class ProxyUpdater(object):
         and not self._updating \
         and not time_since_last < timedelta(seconds=self._max_update_frequency)
 
+  @property
+  def blueprints(self):
+    """
+    Flask blueprints describing managed APIs.
+    """
+    return self._backend.blueprints
+
   def set_up(self):
     self._start_discovery(weight_adjustment_start=None)
     self._update(restart_proxy=False)

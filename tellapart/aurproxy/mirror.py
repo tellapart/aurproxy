@@ -19,6 +19,7 @@ import os
 import psutil
 
 from tellapart.aurproxy.exception import AurProxyConfigException
+from tellapart.aurproxy.source.source import ProxySource
 from tellapart.aurproxy.util import (
   get_logger,
   load_klass_plugin)
@@ -33,50 +34,70 @@ _FALLBACK_COMMAND = 'python -c ' \
                     ' print \'{0}\';' \
                     ' sleep(10)\\")"'.format(_FALLBACK_MSG)
 _GOR_PATH = '/opt/go/bin/gor'
-_MIRROR_COMMAND_PATH = '/etc/aurproxy/gor/mirror.sh'
-_MIRROR_COMMAND_TEMPLATE_PATH = './tellapart/aurproxy/templates' \
-                                '/gor/mirror.sh.template'
+_GOR_COMMAND_PATH = '/etc/aurproxy/gor/dynamic.sh'
 
-def load_mirror_updater(source_config, ports, max_qps, max_update_frequency):
+def load_mirror_updater(source,
+                        ports,
+                        max_qps,
+                        max_update_frequency,
+                        command_template_path):
   """
   Load a MirrorUpdater.
 
   Args:
-    source_config - JSON string - Source configuration whose endpoints describe
-      gor repeaters.
+    source - JSON string or ProxySource - Source whose endpoints describe gor
+      repeaters.
     ports - string of comma seperated integers- Local ports to mirror.
       Example: "8080,8081"
     max_qps - integer - Max QPS to mirror to gor repeater.
     max_update_frequency - integer - number of seconds between updates of
       mirror configuration.
+    command_template_path - str - path to command template to be rendered.
 
   Returns:
     A MirrorUpdater instance.
   """
-  if not source_config:
+  if not source:
     raise AurProxyConfigException('source_config required!')
   if not ports:
     raise AurProxyConfigException('ports required!')
   if not max_qps:
     raise AurProxyConfigException('max_qps required!')
+  if not os.path.isfile(command_template_path):
+    msg = '"{0}" doesn\'t exist!'.format(command_template_path)
+    raise AurProxyConfigException(msg)
   ports = [ int(p) for p in ports.split(',') ]
-  source_dict = json.loads(source_config)
-  source = load_klass_plugin(source_dict,
-                             klass_field_name='source_class')
-  return MirrorUpdater(source, ports, max_qps, max_update_frequency)
+
+  if not isinstance(source, ProxySource):
+    source_dict = json.loads(source)
+    source = load_klass_plugin(source_dict,
+                               klass_field_name='source_class')
+
+  return MirrorUpdater(source,
+                       ports,
+                       max_qps,
+                       max_update_frequency,
+                       command_template_path)
 
 class MirrorUpdater(object):
-  def __init__(self, source, ports, max_qps, max_update_frequency):
+  def __init__(self,
+               source,
+               ports,
+               max_qps,
+               max_update_frequency,
+               command_template_path):
     """
     Manages updating the managed traffic mirroring process (gor).
 
-    source - aurproxy.source.ProxySource - Source whose endpoints describe
-      gor repeaters.
-    ports - list(int) - Local ports to mirror.
-      Example: [8080, 8081]
-    max_qps - integer - Max QPS to mirror to gor repeater.
-    max_update_frequency - integer - number of seconds between updates of
-      mirror configuration.
+    Args:
+      source - aurproxy.source.ProxySource - Source whose endpoints describe
+        gor repeaters.
+      ports - list(int) - Local ports to mirror.
+        Example: [8080, 8081]
+      max_qps - integer - Max QPS to mirror to gor repeater.
+      max_update_frequency - integer - number of seconds between updates of
+        mirror configuration.
+      command_template_path - str - path to command template to be rendered.
     """
     source.register_on_add(self._on_add)
     source.register_on_remove(self._on_remove)
@@ -85,10 +106,20 @@ class MirrorUpdater(object):
     self._max_qps = max_qps
     self._max_update_frequency = max_update_frequency
     self._gor_path = _GOR_PATH
-    self._template_path = _MIRROR_COMMAND_TEMPLATE_PATH
-    self._command_path = _MIRROR_COMMAND_PATH
+    self._template_path = command_template_path
+    self._command_path = _GOR_COMMAND_PATH
     self._needs_update = True
     self._updating = False
+
+  @property
+  def blueprints(self):
+    """
+    Flask blueprints describing managed APIs.
+    """
+    if self._source.blueprint:
+      return [self._source.blueprint]
+    else:
+      return []
 
   def set_up(self):
     """

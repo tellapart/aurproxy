@@ -15,10 +15,10 @@
 import hashlib
 
 class EndpointBase(object):
-  def __init__(self, host, port, port_map=None):
+  def __init__(self, host, port, context=None):
     self._host = host
     self._port = port
-    self._port_map = port_map or {}
+    self._context = context or {}
 
   @property
   def host(self):
@@ -29,12 +29,13 @@ class EndpointBase(object):
     return self._port
 
   @property
-  def port_map(self):
-    return self._port_map
+  def context(self):
+    return self._context
+
 
 class AuditableEndpointBase(EndpointBase):
-  def __init__(self, host, port, audit, port_map=None):
-    super(AuditableEndpointBase, self).__init__(host, port, port_map)
+  def __init__(self, host, port, audit, context=None):
+    super(AuditableEndpointBase, self).__init__(host, port, context)
     self._audit = audit
 
   @property
@@ -42,8 +43,8 @@ class AuditableEndpointBase(EndpointBase):
     return self._audit
 
 class ProxyEndpoint(AuditableEndpointBase):
-  def __init__(self, host, port, audit, weight, port_map=None):
-    super(ProxyEndpoint, self).__init__(host, port, audit, port_map)
+  def __init__(self, host, port, audit, weight, context=None):
+    super(ProxyEndpoint, self).__init__(host, port, audit, context)
     self._weight = weight
 
   @property
@@ -51,8 +52,8 @@ class ProxyEndpoint(AuditableEndpointBase):
     return self._weight
 
 class ShareEndpoint(AuditableEndpointBase):
-  def __init__(self, host, port, share, audit, port_map=None):
-    super(ShareEndpoint, self).__init__(host, port, audit, port_map)
+  def __init__(self, host, port, share, audit, context=None):
+    super(ShareEndpoint, self).__init__(host, port, audit, context)
     self._share = share
 
   @property

@@ -14,6 +14,7 @@
 
 from abc import (
   ABCMeta,
+  abstractmethod,
   abstractproperty)
 
 from tellapart.aurproxy.util import get_logger
@@ -37,12 +38,20 @@ class ProxySource(object):
     return self._endpoints
 
   @abstractproperty
-  def slug(self):
+  def blueprint(self):
     pass
 
   @abstractproperty
+  def slug(self):
+    pass
+
+  @abstractmethod
   def start(self):
     pass
+
+  def stop(self):
+    for endpoint in self._endpoints:
+      self.remove(endpoint)
 
   def add(self, endpoint):
     if endpoint not in self._endpoints:
