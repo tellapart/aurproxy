@@ -28,11 +28,11 @@ logger = get_logger(__name__)
 
 # Fallback for use when no valid gor command line possible.
 _FALLBACK_MSG = 'No mirror source endpoints found.'
-_FALLBACK_COMMAND = 'python -c ' \
-                    '"exec(\\"from gevent import sleep\\n' \
-                    'while True:' \
-                    ' print \'{0}\';' \
-                    ' sleep(10)\\")"'.format(_FALLBACK_MSG)
+_FALLBACK_COMMAND_TEMPLATE = 'echo $$ > {{pid_path}} && exec python -c ' \
+                             '"exec(\\"from gevent import sleep\\n' \
+                             'while True:' \
+                             ' print \'{{fallback_msg}}\';' \
+                             ' sleep(10)\\")"'
 _GOR_PATH = '/opt/go/bin/gor'
 _GOR_COMMAND_PATH = '/etc/aurproxy/gor/dynamic.sh'
 
@@ -40,7 +40,8 @@ def load_mirror_updater(source,
                         ports,
                         max_qps,
                         max_update_frequency,
-                        command_template_path):
+                        command_template_path,
+                        pid_path):
   """
   Load a MirrorUpdater.
 
@@ -77,7 +78,8 @@ def load_mirror_updater(source,
                        ports,
                        max_qps,
                        max_update_frequency,
-                       command_template_path)
+                       command_template_path,
+                       pid_path)
 
 class MirrorUpdater(object):
   def __init__(self,
@@ -85,7 +87,10 @@ class MirrorUpdater(object):
                ports,
                max_qps,
                max_update_frequency,
-               command_template_path):
+               command_template_path,
+               pid_path,
+               gor_path=_GOR_PATH,
+               command_path=_GOR_COMMAND_PATH):
     """
     Manages updating the managed traffic mirroring process (gor).
 
@@ -105,9 +110,12 @@ class MirrorUpdater(object):
     self._ports = ports
     self._max_qps = max_qps
     self._max_update_frequency = max_update_frequency
-    self._gor_path = _GOR_PATH
+    self._gor_path = gor_path
+    self._pid_path = pid_path
     self._template_path = command_template_path
-    self._command_path = _GOR_COMMAND_PATH
+    self._command_path = command_path
+    self._fallback_message = _FALLBACK_MSG
+    self._fallback_command_template = _FALLBACK_COMMAND_TEMPLATE
     self._needs_update = True
     self._updating = False
 
@@ -215,11 +223,20 @@ class MirrorUpdater(object):
       # Aurora is going to keep the replay process running whether or not we
       # have the endpoints needed to construct a valid gor command. If we
       # don't, drop in a placeholder.
-      command = _FALLBACK_COMMAND
+      template = self._fallback_command_template
+      context = self._generate_fallback_context()
     else:
+      with open(self._template_path) as t:
+        template = t.read()
       context = self._generate_context()
-      command = self._render(self._template_path, context)
-    return command
+
+    return self._render(template, context)
+
+  def _generate_fallback_context(self):
+    context = {}
+    context['fallback_msg'] = self._fallback_message
+    context['pid_path'] = self._pid_path
+    return context
 
   def _generate_context(self):
     """
@@ -233,9 +250,10 @@ class MirrorUpdater(object):
     context['ports'] = self._ports
     context['endpoints'] = self._source.endpoints
     context['max_qps'] = self._max_qps
+    context['pid_path'] = self._pid_path
     return context
 
-  def _render(self, template_path, context):
+  def _render(self, template, context):
     """
     Render gor command.
 
@@ -246,9 +264,7 @@ class MirrorUpdater(object):
     Returns:
       Rendered gor command.
     """
-    with open(template_path) as t:
-      template = Template(t.read())
-    return template.render(**context)
+    return Template(template).render(**context)
 
   def _update(self, command, command_path, kill_running):
     """
@@ -313,17 +329,30 @@ class MirrorUpdater(object):
     success = True
     killed_any = False
     try:
-      for proc in psutil.process_iter():
-        cmd_line = ' '.join(proc.cmdline())
-        if self._gor_path in cmd_line \
-          or _FALLBACK_MSG in cmd_line:
-          msg = 'Killing traffic mirror process: {0}'.format(cmd_line)
-          logger.info(msg)
-          proc.kill()
-          killed_any = True
+      proc = psutil.Process(self._get_pid())
+      cmd_line = ' '.join(proc.cmdline())
+      if self._gor_path in cmd_line \
+        or _FALLBACK_MSG in cmd_line:
+        msg = 'Killing traffic mirror process: {0}'.format(cmd_line)
+        logger.info(msg)
+        proc.kill()
+      else:
+        msg = 'Pid is for process with invalid cmd_line: {0}'.format(cmd_line)
+        raise Exception(msg)
     except Exception:
       logger.exception('Attempt to kill traffic mirror processes failed!')
       success = False
     if not killed_any:
       logger.info('Did not kill any traffic mirror processes.')
     return success
+
+  def _get_pid(self):
+    pid_raw = None
+    with open(self._pid_path) as pid_file:
+      try:
+        pid_raw = pid_file.read()
+        pid = int(pid_raw)
+        return pid
+      except Exception:
+        logger.error('Pid retrieval failed. Value: {0}'.format(pid_raw))
+        raise

@@ -58,6 +58,7 @@ _MIRROR_COMMAND_TEMPLATE_PATH = './tellapart/aurproxy/templates/gor' \
                                 '/mirror.sh.template'
 _REPLAY_COMMAND_TEMPLATE_PATH = './tellapart/aurproxy/templates/gor' \
                                 '/replay.sh.template'
+_MIRROR_PID_PATH = '/tmp/mirror_pid'
 
 @commandr.command
 def run(management_port,
@@ -74,6 +75,7 @@ def run(management_port,
         mirror_ports=_DEFAULT_MIRROR_PORTS,
         mirror_max_qps=_DEFAULT_MIRROR_MAX_QPS,
         mirror_max_update_frequency=_DEFAULT_MIRROR_MAX_UPDATE_FREQUENCY,
+        mirror_pid_path=_MIRROR_PID_PATH,
         sentry_dsn=None,
         setup=False):
   """Run the Aurproxy load balancer manager.
@@ -102,7 +104,7 @@ def run(management_port,
         ["source=cluster.role.environment.job"]
     mirror_source - JSON String - Source configuration for gor repeater to
       which http traffic should be mirrored.
-    mirror_ports - Comma seperated integer string - Local ports to mirror.
+    mirror_ports - Comma separated integer string - Local ports to mirror.
       Example: "8080,8081"
     mirror_max_qps - Max QPS to mirror to gor repeater.
     mirror_max_update_frequency - integer - number of seconds between updates
@@ -131,7 +133,8 @@ def run(management_port,
                                          mirror_ports,
                                          mirror_max_qps,
                                          mirror_max_update_frequency,
-                                         _MIRROR_COMMAND_TEMPLATE_PATH)
+                                         _MIRROR_COMMAND_TEMPLATE_PATH,
+                                         mirror_pid_path)
 
   if setup:
     proxy_updater.set_up()
@@ -168,6 +171,7 @@ def run_replay(management_port,
                replay_source,
                replay_max_qps,
                replay_max_update_frequency=_DEFAULT_REPLAY_MAX_UPDATE_FREQUENCY,
+               replay_pid_path=_MIRROR_PID_PATH,
                metric_publisher_class=_DEFAULT_METRIC_PUBLISHER_CLASS,
                metric_publisher_arg=_DEFAULT_METRIC_PUBLISHER_KWARGS,
                sentry_dsn=None,
@@ -201,7 +205,8 @@ def run_replay(management_port,
                                        replay_port,
                                        replay_max_qps,
                                        replay_max_update_frequency,
-                                       _REPLAY_COMMAND_TEMPLATE_PATH)
+                                       _REPLAY_COMMAND_TEMPLATE_PATH,
+                                       replay_pid_path)
   if setup:
     mirror_updater.update(kill_running=False)
   else:

@@ -29,6 +29,7 @@ from flask.ext.restful import (
   Resource)
 from gevent import spawn_later
 from gevent.event import Event
+import itertools
 
 from tellapart.aurproxy.exception import AurProxyConfigException
 from tellapart.aurproxy.source import ProxySource
@@ -104,13 +105,15 @@ class ApiSource(ProxySource):
       def get(self, source_name):
         managed_source = root._get_managed_source(source_name)
         if not managed_source:
-          root._abort(source_name)
+          root._abort_no_source(source_name)
         else:
-          return managed_source.configuration
+          expiration = managed_source.expiration.expiration_time.isoformat()
+          return { "source": managed_source.configuration,
+                   "expiration": expiration }
 
       def delete(self, source_name):
         if not root._get_managed_source(source_name):
-          root._abort(source_name)
+          root._abort_no_source(source_name)
         else:
           root._delete_managed_source(source_name)
         return '', 204
@@ -146,7 +149,7 @@ class ApiSource(ProxySource):
 
     class DynamicSourceList(Resource):
       def get(self):
-        return root._source_map.keys()
+        return { "sources": root._source_map.keys() }
 
     # List sources
     api.add_resource(DynamicSourceList,
@@ -158,7 +161,7 @@ class ApiSource(ProxySource):
 
     return blueprint
 
-  def _abort(self, name):
+  def _abort_no_source(self, name):
     """
     Abort an http request with a 404.
 
@@ -173,11 +176,12 @@ class ApiSource(ProxySource):
     """
     List of SourceEndpoints for sources managed by this ApiSource instance.
     """
-    eps = set()
-    for source_name in self._all_managed_source_names():
-      managed_source = self._get_managed_source(source_name)
-      eps = eps | set(managed_source.source.endpoints)
-    return eps
+    return set(itertools.chain(*(s.endpoints for s in self.sources)))
+
+  @property
+  def sources(self):
+    return [self._get_managed_source(source_name).source
+            for source_name in self._all_managed_source_names()]
 
   def __on_source_add(self, source, endpoint):
     """When adding a managed source."""
@@ -313,6 +317,10 @@ class Expiration(object):
     self._expiration_time = expiration_time
     self._callback = callback
     self._cancel_event = Event()
+
+  @property
+  def expiration_time(self):
+    return self._expiration_time
 
   def start(self):
     """
