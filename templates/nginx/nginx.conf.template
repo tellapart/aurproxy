@@ -1,15 +1,15 @@
 user www-data;
-worker_processes 16;
+worker_processes {{ context.worker_processes or 16 }};
 pid /var/run/nginx.pid;
 daemon off;
 
 events {
-    worker_connections 2000;
+    worker_connections {{ context.worker_connections or 2000 }};
     use epoll;
     multi_accept on;
 }
 
-worker_rlimit_nofile 100000;
+worker_rlimit_nofile {{ context.worker_rlimit_nofile or 100000 }};
 
 http {
     include /etc/nginx/mime.types;
