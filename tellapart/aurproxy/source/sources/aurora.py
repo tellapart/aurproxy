@@ -56,7 +56,11 @@ class AuroraProxySource(ProxySource):
     self._zk_servers = zk_servers
     self._endpoint = endpoint
     self._announcer_serverset_path = announcer_serverset_path
-    self._server_set = None
+    self._server_set = []
+
+  @property
+  def blueprint(self):
+    return None
 
   @property
   def slug(self):
@@ -68,6 +72,9 @@ class AuroraProxySource(ProxySource):
       _ZK_MAP[self._zk_servers] = self._get_kazoo_client()
     self._server_set = self._get_server_set()
     [ self.add(self._get_endpoint(s)) for s in self._server_set ]
+
+  def stop(self):
+    [ self.remove(self._get_endpoint(s)) for s in self._server_set ]
 
   @property
   def _zk(self):
@@ -83,7 +90,7 @@ class AuroraProxySource(ProxySource):
       port_map[k] = v.port
     return SourceEndpoint(host=ep.host,
                           port=ep.port,
-                          port_map=port_map)
+                          context={'port_map': port_map})
 
   def _get_kazoo_client(self):
     kc = KazooClient(

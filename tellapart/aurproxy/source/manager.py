@@ -112,6 +112,10 @@ class SourceGroupManager(object):
       logger.exception('Error removing endpoint.')
 
   @property
+  def blueprints(self):
+    return [s.blueprint for s in self._sources if s.blueprint]
+
+  @property
   def endpoints(self):
     """
     A list of ProxyEndpoints for sources managed by this SourceGroupManager.

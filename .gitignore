@@ -14,4 +14,4 @@ DS_Store
 .coverage
 dist/*
 *.egg-info/
-wq
+*.iml

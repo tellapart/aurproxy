@@ -1,0 +1,3 @@
+#!/bin/bash
+echo $$ > {{pid_path}}
+exec {{gor_path}} -output-http-stats -stats{% for port in ports %} --input-tcp 0.0.0.0:{{port}}{% endfor %}{% for endpoint in endpoints %} --output-http "{{endpoint.host}}:{{endpoint.port}}|{{max_qps}}"{% endfor %}

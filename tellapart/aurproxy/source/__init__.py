@@ -14,5 +14,6 @@
 
 from .manager import SourceGroupManager
 from .source import ProxySource
+from .sources.api import ApiSource
 from .sources.aurora import AuroraProxySource
 from .sources.static import StaticProxySource

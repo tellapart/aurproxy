@@ -21,6 +21,8 @@ service discovery mechanism.
 - Delayed start for new endpoints
 - Traffic ramping for new endpoints
 - Simple overload protection
+- HTTP traffic mirroring & replay modes
+  - Using [gor](https://github.com/buger/gor)
 - Route HTTP requests to a pool of endpoints from multiple jobs
 - Route HTTP requests based on HTTP route
 - Route HTTP requests based on HTTP "Host" header
@@ -110,6 +112,48 @@ Replace your zk_servers, role, environment, job, etc. in the value of the
   isn't in your ephemeral port range and then set your job up to be run in a
   dedicated group with a "host" constraint value of "limit:1" in order to
   ensure only 1 aurproxy task instance per slave for that job.
+
+## Traffic Mirroring & Replay Modes:
+
+Aurproxy HTTP traffic mirroring and replay features use
+[gor](https://github.com/buger/gor), which can be set up to mirror a fixed
+number of queries per second from a full aurproxy task instance over a TCP
+stream to one or more gor replay servers. Aurproxy finds gor instances using
+sources, and will update its gor command line to add new endpoints as they
+appear and remove old ones as they disappear.
+
+To use traffic mirroring:
+
+1. Set up a gor replay server. It can be but doesn't have to be in Aurora.
+   See "traffic replay" for instructions on how to set one up using aurproxy
+   to manage it.
+2. Add a gor_process to your Aurproxy task definition.
+
+        # max_failures=0 is important:
+        # aurproxy kills the gor process when it updates mirror.sh,
+        # and max_failures=0 means that Aurora won't treat the task as
+        # unhealthy after some number of gor process restarts.
+        gor_process = Process(
+          name='gor',
+          cmdline='/etc/aurproxy/gor/dynamic.sh',
+          max_failures=0)
+
+3. Pass values for mirror_source (an aurproxy source configured to point to
+   your gor replication server(s)), mirror_ports, mirror_max_qps, and
+   mirror_max_update_frequency into aurproxy when starting it.
+
+To use traffic replay:
+
+1. Set up a replay job to run aurproxy "run_replay" with the "--setup" flag and
+   then both run_replay and gor, as per above in the traffic mirroring
+   instructions. run_replay command line example:
+
+        cd /opt/aurproxy && \
+        python -m tellapart.aurproxy.command run_replay \
+          --management-port 12345 \
+          --replay-port 12346 \
+          --replay-source '{"name": "replay", "source_class": "tellapart.aurproxy.source.ApiSource"}' \
+          --replay-max-qps 1000
 
 
 ## Lifecycle
@@ -304,6 +348,12 @@ Sentry.
 - **host:** Required host for static endpoint (EG: '127.0.0.1')
 - **port:** Required port for static endpoint (EG: 12345)
 - **share_adjusters:** Optional list of ShareAdjuster dictionaries.
+
+### ApiSource
+- **source_class:** 'aurproxy.source.ApiSource'
+- **name:** Required name of static source (EG: 'replay')
+- **source_whitelist:** Optional list(str) of source class paths that are
+  allowed to be created under ApiSource.
 
 ### ShareAdjuster (Base)
 - **share_adjuster_class:** Required python class path for share adjuster type.

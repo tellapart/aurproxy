@@ -17,6 +17,7 @@ from abc import (
   abstractmethod,
   abstractproperty)
 import copy
+import itertools
 
 from tellapart.aurproxy.config import (
   ProxyRoute,
@@ -144,6 +145,10 @@ class ProxyBackend(object):
                                **share_adjuster_kwargs)
       share_adjuster_factories.append(p_f)
     return share_adjuster_factories
+
+  @property
+  def blueprints(self):
+    return list(itertools.chain(*[s.blueprints for s in self._proxy_servers]))
 
   def signal_update(self):
     if not self._signal_update_fn:

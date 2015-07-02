@@ -33,6 +33,10 @@ class TstSource(ProxySource):
       self_cb(self)
 
   @property
+  def blueprint(self):
+    return None
+
+  @property
   def endpoints(self):
     return self._endpoints
 
