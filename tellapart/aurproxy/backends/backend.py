@@ -16,8 +16,10 @@ from abc import (
   ABCMeta,
   abstractmethod,
   abstractproperty)
+
 import copy
 import itertools
+import shutil
 
 from tellapart.aurproxy.config import (
   ProxyRoute,
@@ -167,6 +169,15 @@ class ProxyBackend(object):
       for server in self._proxy_servers:
         for route in server.routes:
           route.start(weight_adjustment_start)
+
+  def move_file(self, source, destination):
+    try:
+      shutil.move(source, destination)
+    except (OSError, IOError):
+      logger.exception('Failed to move {} to {}'.format(
+        source,
+        destination,
+      ))
 
   @abstractmethod
   def update(self, restart_proxy):
