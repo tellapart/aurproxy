@@ -34,7 +34,7 @@ http {
                                      '"$upstream_addr" $msec';
 
     access_log /dev/stdout combined_forwarded_ip;
-    error_log /dev/stderr;
+    error_log stderr;
 
     gzip on;
 
