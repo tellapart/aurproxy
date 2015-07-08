@@ -46,7 +46,8 @@ class MirrorUpdaterTests(unittest.TestCase):
                                          ports='8080,8081',
                                          max_qps=100,
                                          max_update_frequency=15,
-                                         command_template_path=template_path)
+                                         command_template_path=template_path,
+                                         pid_path='/tmp/gor-mirror.pid')
 
     # Patch in the dummy update function
     funcType = type(MirrorUpdater.update)
