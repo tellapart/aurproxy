@@ -32,7 +32,7 @@ from raven.middleware import Sentry
 _CLASS_PATH_TO_CLASS_CACHE = {}
 
 
-CommandResult = namedtuple('CommandResult', 'returncode', 'stdout', 'stderr')
+CommandResult = namedtuple('CommandResult', 'returncode, stdout, stderr')
 
 
 def class_from_class_path(class_path):
