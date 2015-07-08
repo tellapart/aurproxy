@@ -12,26 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import copy
+import logging
+import importlib
+import subprocess
+import unicodedata
+from hashlib import md5
+from collections import namedtuple
+
 import gevent
 import gevent.event
-import logging
 from raven import Client
 from raven.conf import setup_logging
 from raven.handlers.logging import SentryHandler
 from raven.middleware import Sentry
-import re
-import unicodedata
-
-from hashlib import md5
-from fabric.api import (
-  env,
-  local,
-  settings)
-import importlib
 
 
 _CLASS_PATH_TO_CLASS_CACHE = {}
+
+
+CommandResult = namedtuple('CommandResult', 'returncode', 'stdout', 'stderr')
+
 
 def class_from_class_path(class_path):
   """
@@ -138,11 +140,23 @@ def slugify(s):
 
   return slug
 
+
 def run_local(command, capture=False):
-  env.host_string = "localhost"
-  with settings(warn_only=True):
-    run_result = local(command, capture=capture)
-  return run_result
+  proc = subprocess.Popen(
+    command,
+    shell=True,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+  )
+  stdout, stderr = proc.communicate()
+
+  if capture:
+    return CommandResult(
+      returncode=proc.returncode,
+      stdout=stdout,
+      stderr=stderr,
+    )
+
 
 def setup_sentry(dsn=None):
   """Configures the Sentry logging handler.
