@@ -65,6 +65,9 @@ UNHEALTHY_RESULTS = [ HealthCheckResult.ERROR_CODE,
                       HealthCheckResult.TIMEOUT,
                       HealthCheckResult.UNKNOWN_ERROR ]
 
+SUPPORTED_HEALTHCHECK_METHODS = ('GET', 'HEAD')
+
+
 class HealthCheckStatus(object):
   """
   Possible statuses of ongoing check instances.
@@ -78,7 +81,7 @@ HEALTHY_STATUSES = [ HealthCheckStatus.HEALTHY ]
 class HttpHealthCheckShareAdjuster(ShareAdjuster):
   def __init__(self, endpoint, signal_update_fn, route='/health', interval=5,
                timeout=3.0, unhealthy_threshold=2, healthy_threshold=2,
-               port_name=None):
+               port_name=None, http_method='GET'):
     """
     A basic http health check implementation. Parameters match those available
     on an Elastic Loadbalancer.
@@ -94,6 +97,7 @@ class HttpHealthCheckShareAdjuster(ShareAdjuster):
       unhealthy_threshold - int - failures before endpoint marked unhealthy.
       healthy_threshold - int - successes before endpoint marked healthy.
       port_name - str - Optional name of port to check. EG: 'health'.
+      http_method - str - Optional uppercase name of the http verb. EG: GET or HEAD
     """
     super(HttpHealthCheckShareAdjuster, self).__init__(endpoint,
                                                        signal_update_fn)
@@ -107,6 +111,12 @@ class HttpHealthCheckShareAdjuster(ShareAdjuster):
     self._check_results = collections.deque(maxlen=max_result_len)
     self._status = HealthCheckStatus.INITIALIZING
     self._stop_event = Event()
+
+    if http_method.upper() not in SUPPORTED_HEALTHCHECK_METHODS:
+      raise Exception('http_method only supports: {}'.format(
+        ', '.join(SUPPORTED_HEALTHCHECK_METHODS),
+      ))
+    self._http_method = http_method.lower()
 
   @property
   def status(self):
@@ -174,7 +184,9 @@ class HttpHealthCheckShareAdjuster(ShareAdjuster):
     try:
       self._record(HttpHealthCheckLogEvent.STARTING_CHECK,
                    HttpHealthCheckLogResult.SUCCESS, log_fn=logger.debug)
-      r = requests.get(check_uri, timeout=self._timeout)
+
+      r = getattr(requests, self._http_method)(check_uri, timeout=self._timeout)
+
       if r.status_code == requests.codes.ok:
         check_result = HealthCheckResult.SUCCESS
         self._record(HttpHealthCheckLogEvent.RUNNING_CHECK,
