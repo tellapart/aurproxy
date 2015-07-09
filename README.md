@@ -378,6 +378,7 @@ Sentry.
   marked as being unhealthy. (EG: 2)
 - **healthy_threshold:** Number of failed checks before an unhealthy task is
   marked as being healthy. (EG: 2)
+- **http_method:** Which http method to use for healthchecks (EG: HEAD or GET)
 
 ### Context
 Some of the configuration elements above support a "context" dictionary. This
