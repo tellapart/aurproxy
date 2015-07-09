@@ -170,15 +170,6 @@ class ProxyBackend(object):
         for route in server.routes:
           route.start(weight_adjustment_start)
 
-  def move_file(self, source, destination):
-    try:
-      shutil.move(source, destination)
-    except (OSError, IOError):
-      logger.exception('Failed to move {} to {}'.format(
-        source,
-        destination,
-      ))
-
   @abstractmethod
   def update(self, restart_proxy):
     pass
