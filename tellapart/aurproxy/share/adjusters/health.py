@@ -205,7 +205,7 @@ class HttpHealthCheckShareAdjuster(ShareAdjuster):
       if 'gaierror' in unicode(ex):
         check_result = HealthCheckResult.KNOWN_LOCAL_ERROR
         error_log_fn = logger.error
-      elif 'Connection Refused' in unicode(ex):
+      elif 'connection refused' in unicode(ex).lower():
         check_result = HealthCheckResult.KNOWN_REMOTE_ERROR
         error_log_fn = logger.error
       else:
