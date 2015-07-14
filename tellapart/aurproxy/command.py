@@ -35,6 +35,8 @@ from tellapart.aurproxy.util import (
   setup_sentry,
   setup_sentry_wsgi)
 
+from tellapart.aurproxy.exception import AurProxyConfigException
+
 
 logger = get_logger(__name__)
 logging.getLogger('requests').setLevel(logging.WARNING)
@@ -120,11 +122,19 @@ def run(management_port,
     setup_sentry(sentry_dsn)
 
   # Load config
-  proxy_config = json.loads(config)
+  try:
+    proxy_config = json.loads(config)
+  except (TypeError, ValueError):
+    raise commandr.CommandrUsageError('Invalid JSON configuration specified via --config')
 
   # Set up updater
-  proxy_updater = ProxyUpdater(backend, proxy_config, update_period,
+  try:
+    proxy_updater = ProxyUpdater(backend, proxy_config, update_period,
                                max_update_frequency)
+  except AurProxyConfigException as exc:
+    raise commandr.CommandrUsageError(
+      'Invalid configuration: {}'.format(str(exc)),
+    )
 
   # Set up mirroring
   mirror_updater = None
@@ -199,7 +209,11 @@ def run_replay(management_port,
       to set up the replay server, then start aurproxy and the replay server
       together.
   """
-  source_dict = json.loads(replay_source)
+  try:
+    source_dict = json.loads(replay_source)
+  except (TypeError, ValueError):
+    raise commandr.CommandrUsageError('Invalid JSON configuration specified via --replay_source')
+
   source = load_klass_plugin(source_dict, klass_field_name='source_class')
   mirror_updater = load_mirror_updater(source,
                                        replay_port,
@@ -250,7 +264,13 @@ def synchronize(registration_source,
         ["domain=myapp.mydomain.com", "type=A"]
     write - bool - Whether to apply the changes.
   """
-  source_dict = json.loads(registration_source)
+  try:
+    source_dict = json.loads(registration_source)
+  except (TypeError, ValueError):
+    raise commandr.CommandrUsageError(
+      'Invalid JSON configuration specified via --registration_source',
+    )
+
   source = load_klass_plugin(source_dict,
                              klass_field_name='source_class')
   extra_kwargs = {'source': source}
