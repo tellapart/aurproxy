@@ -297,4 +297,7 @@ def _start_web(port, sentry_dsn=None, blueprints=None):
   http_server.serve_forever()
 
 if __name__ == '__main__':
-  commandr.Run()
+  try:
+    commandr.Run()
+  except KeyboardInterrupt:
+    raise SystemExit('\nExiting on CTRL-c')
