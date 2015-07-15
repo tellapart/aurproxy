@@ -59,7 +59,7 @@ class ProxyBackend(object):
   def _load_config_item(self, name, config_container,
                         default=None, required=True):
     if required and name not in config_container:
-      raise AurProxyConfigException('{0} Required.'.format(name))
+      raise AurProxyConfigException('\'{0}\' required.'.format(name))
 
     return config_container.get(name, default)
 
