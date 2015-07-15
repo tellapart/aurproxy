@@ -16,8 +16,10 @@ from abc import (
   ABCMeta,
   abstractmethod,
   abstractproperty)
+
 import copy
 import itertools
+import shutil
 
 from tellapart.aurproxy.config import (
   ProxyRoute,
