@@ -163,6 +163,7 @@ def move_file(source, destination):
   try:
     shutil.move(source, destination)
   except (OSError, IOError):
+    logger = get_logger(__name__)
     logger.exception('Failed to move {} to {}'.format(
       source,
       destination,
