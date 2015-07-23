@@ -16,6 +16,7 @@ import re
 import copy
 import logging
 import importlib
+import shutil
 import subprocess
 import unicodedata
 from hashlib import md5
@@ -158,14 +159,14 @@ def run_local(command, capture=False):
     )
 
 
-  def move_file(self, source, destination):
-    try:
-      shutil.move(source, destination)
-    except (OSError, IOError):
-      logger.exception('Failed to move {} to {}'.format(
-        source,
-        destination,
-      ))
+def move_file(source, destination):
+  try:
+    shutil.move(source, destination)
+  except (OSError, IOError):
+    logger.exception('Failed to move {} to {}'.format(
+      source,
+      destination,
+    ))
 
 
 def setup_sentry(dsn=None):
