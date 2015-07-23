@@ -12,10 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .endpoint import (
-  ProxyEndpoint,
-  ShareEndpoint,
-  SourceEndpoint)
-from .route import ProxyRoute
-from .server import ProxyServer
-from .stream import ProxyStream
+class ProxyStream(object):
+  def __init__(self, source_group_manager):
+    self._source_group_manager = source_group_manager
+
+  @property
+  def blueprints(self):
+    return self._source_group_manager.blueprints
+
+  @property
+  def endpoints(self):
+    return self._source_group_manager.endpoints
+
+  @property
+  def slug(self):
+    return self._source_group_manager.slug
+
+  def start(self, weight_adjustment_start):
+    self._source_group_manager.start(weight_adjustment_start)

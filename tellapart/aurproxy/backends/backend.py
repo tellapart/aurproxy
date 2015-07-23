@@ -16,14 +16,13 @@ from abc import (
   ABCMeta,
   abstractmethod,
   abstractproperty)
-
 import copy
 import itertools
-import shutil
 
 from tellapart.aurproxy.config import (
   ProxyRoute,
-  ProxyServer)
+  ProxyServer,
+  ProxyStream)
 from tellapart.aurproxy.exception import AurProxyConfigException
 from tellapart.aurproxy.metrics.store import increment_counter
 from tellapart.aurproxy.source import SourceGroupManager
@@ -59,7 +58,7 @@ class ProxyBackend(object):
   def _load_config_item(self, name, config_container,
                         default=None, required=True):
     if required and name not in config_container:
-      raise AurProxyConfigException('\'{0}\' required.'.format(name))
+      raise AurProxyConfigException('{0} Required.'.format(name))
 
     return config_container.get(name, default)
 
@@ -77,8 +76,19 @@ class ProxyBackend(object):
     healthcheck_route = self._load_config_item('healthcheck_route',
                                                server,
                                                required=False)
-    routes =  self._load_config_item('routes', server, required=True)
+    routes = self._load_config_item('routes', server, required=False)
     proxy_routes = self._load_proxy_routes(routes)
+    streams = self._load_config_item('streams', server, required=False)
+    proxy_streams = self._load_proxy_streams(streams)
+
+    msg = None
+    if not routes and not streams:
+      msg = 'At least one ProxyStream or ProxyRoute required.'
+    if routes and streams:
+      msg = 'HTTP and TCP balancing not supported at the same time.'
+    if msg:
+      raise AurProxyConfigException(msg)
+
     context = self._load_config_item('context',
                                      server,
                                      required=False,
@@ -87,11 +97,12 @@ class ProxyBackend(object):
                        ports,
                        healthcheck_route,
                        proxy_routes,
+                       proxy_streams,
                        context)
 
   def _load_proxy_routes(self, routes):
     proxy_routes = []
-    for route in routes:
+    for route in routes or []:
       proxy_route = self._load_proxy_route(route)
       proxy_routes.append(proxy_route)
     return proxy_routes
@@ -137,6 +148,21 @@ class ProxyBackend(object):
                                      **extra_kwargs)
     return proxy_source
 
+  def _load_proxy_streams(self, streams):
+    proxy_streams = []
+    for stream in streams or []:
+      proxy_stream = self._load_proxy_stream(stream)
+      proxy_streams.append(proxy_stream)
+    return proxy_streams
+
+  def _load_proxy_stream(self, stream):
+    sources = self._load_config_item('sources', stream, required=True)
+    proxy_sources = self._load_proxy_sources(sources)
+    update_fn = self._signal_update_fn
+    source_group_manager = SourceGroupManager(proxy_sources,
+                                              signal_update_fn=update_fn)
+    return ProxyStream(source_group_manager)
+
   def _load_share_adjuster_factories(self, share_adjusters):
     share_adjuster_factories = []
     for share_adjuster in share_adjusters:
@@ -169,6 +195,8 @@ class ProxyBackend(object):
       for server in self._proxy_servers:
         for route in server.routes:
           route.start(weight_adjustment_start)
+        for stream in server.streams:
+          stream.start(weight_adjustment_start)
 
   @abstractmethod
   def update(self, restart_proxy):
@@ -184,21 +212,21 @@ class ProxyBackend(object):
 
 _backends = dict()
 class ProxyBackendProvider():
-    @staticmethod
-    def register(klass):
-      global _backends
-      if klass.NAME in _backends:
-        msg = 'Backend "{0}" already registered'.format(klass.NAME)
-        raise AurProxyConfigException(msg)
-      _backends[klass.NAME] = klass
+  @staticmethod
+  def register(klass):
+    global _backends
+    if klass.NAME in _backends:
+      msg = 'Backend "{0}" already registered'.format(klass.NAME)
+      raise AurProxyConfigException(msg)
+    _backends[klass.NAME] = klass
 
-    @staticmethod
-    def get_backend(name, configuration, signal_update_fn):
-      global _backends
-      return _backends[name](configuration, signal_update_fn)
+  @staticmethod
+  def get_backend(name, configuration, signal_update_fn):
+    global _backends
+    return _backends[name](configuration, signal_update_fn)
 
-    @staticmethod
-    def unregister(klass):
-      global _backends
-      if klass.NAME in _backends:
-        _backends.pop(klass.NAME)
+  @staticmethod
+  def unregister(klass):
+    global _backends
+    if klass.NAME in _backends:
+      _backends.pop(klass.NAME)
