@@ -21,6 +21,7 @@ from tellapart.aurproxy.backends.nginx.metrics import \
 from tellapart.aurproxy.metrics.store import increment_counter
 from tellapart.aurproxy.util import (
   get_logger,
+  move_file,
   run_local)
 
 logger = get_logger(__name__)
@@ -151,10 +152,9 @@ class NginxProxyBackend(ProxyBackend):
   def _backup(self, config_dest):
     if os.path.isfile(config_dest):
       backup_path = self._build_backup_path(config_dest)
-      run_local('mv {0} {1}'.format(config_dest, backup_path))
+      move_file(config_dest, backup_path)
 
   def _revert(self, config_dest):
     backup_path = self._build_backup_path(config_dest)
     if os.path.isfile(backup_path):
-      run_local('mv {0} {1}'.format(backup_path,
-                                    config_dest))
+      move_file(backup_path, config_dest)
