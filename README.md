@@ -17,6 +17,8 @@ service discovery mechanism.
 - Battle tested at TellApart
   - EC2 Classic-hosted Aurora cluster
   - Regularly proxies ~150k QPS in production
+- Load balance HTTP (nginx)
+- Load balance TCP (nginx)
 - Active healthchecks for managed endpoints
 - Delayed start for new endpoints
 - Traffic ramping for new endpoints
