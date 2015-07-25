@@ -22,7 +22,10 @@ from tellapart.aurproxytest.backends.backend import (
 class NginxProxyBackendTests(ProxyBackendTstBase):
 
   def test_nginx_proxy_backend(self):
-    config, scope = build_proxy_configuration(add_share_adjusters=True)
+    config, scope = build_proxy_configuration(include_route_server=True,
+                                              include_stream_server=False,
+                                              include_route_share_adjusters=True,
+                                              include_stream_share_adjusters=False)
 
     backend = NginxProxyBackend(configuration=config,
                                 signal_update_fn=scope.signal_update_fn)

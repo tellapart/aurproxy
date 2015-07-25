@@ -311,16 +311,25 @@ Sentry.
 - **context:** Optional dictionary. See "context" note below.
 
 ### ProxyServer
-- **routes:** Required list of one or more ProxyRoute dictionaries
+- **routes:** Optional list of one or more ProxyRoute dictionaries.
+  At least one route or one stream must be set.
+- **streams:** Optional list of one or more ProxyStream dictionaries.
+  At least one route or one stream must be set.
 - **ports:** Required list of one or more ports to listen on. Shouldn't collide
   with other ports in use. Use dedicated group + host limit constraints to
   control.
 - **healthcheck_route:** Optional HTTP route (EG: "/health"). Will always
-  return 200 if set.
+  return 200 if set. Only applied to ProxyRoutes.
 - **context:** Optional dictionary. See "context" note below.
 
 ### ProxyRoute
 - **locations:** Required list with one or more HTTP routes (EG: ["/"])
+- **sources:** Required list with one or more ProxySource dictionaries
+- **overflow_sources:** Optional list of one or more ProxySource dictionaries
+- **overflow\_threshold\_pct:** Optional threshold past which traffic will be
+  sent to overflow_source.
+
+### ProxyStream
 - **sources:** Required list with one or more ProxySource dictionaries
 - **overflow_sources:** Optional list of one or more ProxySource dictionaries
 - **overflow\_threshold\_pct:** Optional threshold past which traffic will be
