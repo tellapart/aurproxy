@@ -313,10 +313,10 @@ Sentry.
 - **context:** Optional dictionary. See "context" note below.
 
 ### ProxyServer
-- **routes:** Optional list of one or more ProxyRoute dictionaries.
-  At least one route or one stream must be set.
-- **streams:** Optional list of one or more ProxyStream dictionaries.
-  At least one route or one stream must be set.
+- **routes:** Optional list of one or more ProxyRoute dictionaries. Use routes
+  for HTTP load balancing. At least one route or one stream must be set.
+- **streams:** Optional list of one or more ProxyStream dictionaries. Use
+  streams for TCP load balancing. At least one route or one stream must be set.
 - **ports:** Required list of one or more ports to listen on. Shouldn't collide
   with other ports in use. Use dedicated group + host limit constraints to
   control.
