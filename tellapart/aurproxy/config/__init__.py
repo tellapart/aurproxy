@@ -18,3 +18,4 @@ from .endpoint import (
   SourceEndpoint)
 from .route import ProxyRoute
 from .server import ProxyServer
+from .stream import ProxyStream

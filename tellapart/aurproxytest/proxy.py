@@ -26,13 +26,19 @@ class ProxyUpdaterTests(unittest.TestCase):
   def test_proxy_updater(self):
     arg_sets = []
     for add_s_a in [True, False]:
-      config, scope = build_proxy_configuration(add_share_adjusters=add_s_a)
+      config, scope = build_proxy_configuration(include_route_server=True,
+                                                include_stream_server=False,
+                                                include_route_share_adjusters=add_s_a,
+                                                include_stream_share_adjusters=False)
       arg_sets.append((config, scope, add_s_a))
 
     try:
       ProxyBackendProvider.register(TstProxyBackend)
       for config, scope, add_share_adjusters in arg_sets:
-        config, scope = build_proxy_configuration(add_share_adjusters=True)
+        config, scope = build_proxy_configuration(include_route_server=True,
+                                                  include_stream_server=False,
+                                                  include_route_share_adjusters=True,
+                                                  include_stream_share_adjusters=False)
         now = datetime.now()
 
         proxy_updater = ProxyUpdater(backend=TstProxyBackend.NAME,
@@ -52,7 +58,7 @@ class ProxyUpdaterTests(unittest.TestCase):
 
         # Proxy updater that has been signaled by a source should need to
         # update
-        scope.source.add(SourceEndpoint('127.0.0.1', 8080))
+        scope.route_source.add(SourceEndpoint('127.0.0.1', 8080))
         self.assertTrue(proxy_updater._should_update(now))
         proxy_updater._try_update(now)
         self.assertFalse(proxy_updater._should_update(now))
@@ -60,7 +66,7 @@ class ProxyUpdaterTests(unittest.TestCase):
         if add_share_adjusters:
           # Proxy updater that has been signaled by a share_adjuster should
           # need to update
-          scope.share_adjuster.set_share(.5)
+          scope.route_share_adjuster.set_share(.5)
           self.assertTrue(proxy_updater._should_update(now))
           proxy_updater._try_update(now)
           self.assertFalse(proxy_updater._should_update(now))

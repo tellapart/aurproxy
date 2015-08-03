@@ -32,8 +32,8 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 ENV NGX_DEV_KIT_VER 0.2.19
-ENV NGX_VER 1.7.10
-ENV NGX_MD5 8e800ea5247630b0fcf31ba35cb3245d
+ENV NGX_VER 1.9.0
+ENV NGX_MD5 487c26cf0470d8869c41a73621847268
 ENV NGX_STATSD_VER b756a12abf110b9e36399ab7ede346d4bb86d691
 ENV NGX_HEADERS_MORE_VER 0.26
 ENV NGX_ECHO_VER 0.57
@@ -79,6 +79,7 @@ RUN apt-get update \
                 --with-http_stub_status_module \
                 --with-http_ssl_module \
                 --with-http_sub_module \
+                --with-stream \
                 --with-ipv6 \
                 --with-sha1=/usr/include/openssl \
                 --with-md5=/usr/include/openssl \

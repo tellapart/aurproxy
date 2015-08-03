@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from jinja2 import Template
+import os
 
 from tellapart.aurproxy.backends import ProxyBackend
 from tellapart.aurproxy.backends.nginx.metrics import \
@@ -21,8 +21,8 @@ from tellapart.aurproxy.backends.nginx.metrics import \
 from tellapart.aurproxy.metrics.store import increment_counter
 from tellapart.aurproxy.util import (
   get_logger,
-  run_local,
-  move_file)
+  move_file,
+  run_local)
 
 logger = get_logger(__name__)
 
@@ -56,7 +56,6 @@ class NginxProxyBackend(ProxyBackend):
                                               config,
                                               default=None,
                                               required=False)
-
     if self._stats_port:
       self._metrics_publisher = NginxProxyMetricsPublisher(self._stats_port)
     else:
@@ -72,9 +71,21 @@ class NginxProxyBackend(ProxyBackend):
     return self._metrics_publisher
 
   def _generate_context(self):
+
     context = {'context': self._context,
-               'servers': self._proxy_servers,
                'stats_port': self._stats_port}
+
+    context['http_servers'] = []
+    context['stream_servers'] = []
+
+    for proxy_server in self._proxy_servers:
+      if proxy_server.routes and not proxy_server.streams:
+        context['http_servers'].append(proxy_server)
+      elif proxy_server.streams and not proxy_server.routes:
+        context['stream_servers'].append(proxy_server)
+      else:
+        raise Exception('Invalid configuration - '
+                        'ProxyServer can have routes or streams but not both.')
     return context
 
   def restart(self):

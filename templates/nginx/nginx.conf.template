@@ -11,6 +11,7 @@ events {
 
 worker_rlimit_nofile {{ context.worker_rlimit_nofile or 100000 }};
 
+{% if http_servers %}
 http {
     include /etc/nginx/mime.types;
     default_type application/octet-stream;
@@ -64,7 +65,7 @@ http {
     }
     {%- endif %}
 
-    {% for server in servers %}
+    {% for server in http_servers %}
     {%- if server.context.overflow_port %}
     server {
         listen {{server.context.overflow_port}} default_server;
@@ -133,3 +134,24 @@ http {
     }
     {% endfor %}
 }
+{% endif %}
+
+{% if stream_servers %}
+stream {
+   {% for server in stream_servers %}
+    server {
+        {% for port in server.ports %}listen {{ port }};
+        {%- endfor %}
+        proxy_pass {{ server.slug }};
+    }
+
+    upstream {{ server.slug }} {
+        least_conn;
+        {% for stream in server.streams %}
+        {% for endpoint in stream.endpoints %}{% if not endpoint.weight %}#{% endif %}server {{ endpoint.host }}:{{ endpoint.port }} weight={{ endpoint.weight }}; # {{ endpoint.audit.render() }}
+        {% endfor %}
+        {% endfor %}
+    }
+   {% endfor %}
+}
+{% endif %}

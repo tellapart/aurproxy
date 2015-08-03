@@ -17,16 +17,19 @@ import itertools
 from tellapart.aurproxy.util import slugify
 
 class ProxyServer(object):
-  def __init__(self, hosts, ports, healthcheck_route, routes, context):
+  def __init__(self, hosts, ports, healthcheck_route, routes, streams, context):
     self.hosts = hosts
     self.ports = ports
     self.healthcheck_route = healthcheck_route
     self.routes = routes
+    self.streams = streams
     self.context = context
 
   @property
   def slug(self):
-    hosts_part = '__'.join([slugify(h) for h in self.hosts])
+    hosts_part = ''
+    if self.hosts:
+      hosts_part = '__'.join([slugify(h) for h in self.hosts])
     ports_part = '__'.join([unicode(p) for p in self.ports])
     s = 's__'
     if hosts_part:
@@ -37,4 +40,5 @@ class ProxyServer(object):
 
   @property
   def blueprints(self):
-    return list(itertools.chain(*[r.blueprints for r in self.routes]))
+    return list(itertools.chain(*[r.blueprints for r in self.routes])) + \
+           list(itertools.chain(*[s.blueprints for s in self.streams]))
