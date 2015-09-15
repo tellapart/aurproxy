@@ -407,12 +407,6 @@ class ServerSet(object):
                   " leaving."
                  % (len(new_nodes), len(removed_nodes)))
 
-        for m in new_members:
-          try:
-            self._on_join(m)
-          except Exception:
-            LOG.exception('Error in OnJoin callback.')
-
         for m in removed_nodes:
           removed_member = self._members.pop(m, None)
           if removed_member:
@@ -422,6 +416,12 @@ class ServerSet(object):
               LOG.exception('Error in OnLeave callback.')
           else:
             LOG.warn('Member %s was not found in cached set' % str(m))
+
+        for m in new_members:
+          try:
+            self._on_join(m)
+          except Exception:
+            LOG.exception('Error in OnJoin callback.')
       except Exception:
         LOG.exception('Error in notification worker.')
 
