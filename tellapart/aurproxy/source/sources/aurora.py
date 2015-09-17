@@ -47,7 +47,8 @@ class AuroraProxySource(ProxySource):
                endpoint=None,
                announcer_serverset_path=_DEFAULT_ANNOUNCER_SERVERSET_PATH,
                signal_update_fn=None,
-               share_adjuster_factories=None):
+               share_adjuster_factories=None,
+               zk_member_prefix=None):
     super(AuroraProxySource, self).__init__(signal_update_fn,
                                             share_adjuster_factories)
     self._role = role
@@ -57,6 +58,7 @@ class AuroraProxySource(ProxySource):
     self._endpoint = endpoint
     self._announcer_serverset_path = announcer_serverset_path
     self._server_set = []
+    self._zk_member_prefix = zk_member_prefix
 
   @property
   def blueprint(self):
@@ -104,10 +106,16 @@ class AuroraProxySource(ProxySource):
   def _get_server_set(self):
     full_sd_path = get_service_discovery_path(self._job_path,
                                               self._announcer_serverset_path)
+
+    kwargs = {}
+    if self._zk_member_prefix:
+      kwargs['member_filter'] = lambda m: m.startswith(self._zk_member_prefix)
+
     server_set = ServerSet(self._zk,
                            full_sd_path,
                            on_join=self._on_join(self._job_path),
-                           on_leave=self._on_leave(self._job_path))
+                           on_leave=self._on_leave(self._job_path),
+                           **kwargs)
     return server_set
 
   @property
@@ -253,6 +261,8 @@ class Member(object):
   def __hash__(self):
     return hash(self._key())
 
+ROOT_LOG = logger
+
 class ServerSet(object):
   """A very minimal ServerSet implementation using the Kazoo Client.
 
@@ -283,7 +293,8 @@ class ServerSet(object):
     def is_blocking(self):
       return self._count != 0
 
-  def __init__(self, zk, zk_path, on_join=None, on_leave=None):
+  def __init__(self, zk, zk_path, on_join=None, on_leave=None,
+      member_filter=None, member_factory=Member.from_node):
     """Initialize the ServerSet, ensuring the zk_path exists.
 
     Args:
@@ -292,10 +303,13 @@ class ServerSet(object):
                 it will be watched for creation.
       on_join - An optional function to call when members join the node.
       on_leave - An optional function to call when members leave the node.
+      member_filter - An optional function to filter children from ZK.
+      member_factory - A function to create a Member object from a znode.
     """
     def noop(*args, **kwargs): pass
-
-    LOG.info('TellApart ServerSet initializing on path %s' % zk_path)
+    def true(*args, **kwargs): return True
+    self._log = ROOT_LOG.getChild('[%s]' % zk_path)
+    self._log.info('TellApart ServerSet initializing on path %s' % zk_path)
 
     if not isinstance(zk, KazooClient):
       raise TypeError('zk must be an instance of a KazooClient')
@@ -312,6 +326,8 @@ class ServerSet(object):
     self._notification_queue = Queue(0)
     self._watching = False
     self._cb_blocker = self._CallbackBlocker()
+    self._member_filter = member_filter or true
+    self._member_factory = member_factory
     gevent.spawn(self._notification_worker)
 
     if on_join or on_leave:
@@ -323,8 +339,8 @@ class ServerSet(object):
         nodes = self._zk.get_children(self._zk_path)
       except NoNodeError:
         # The un-common case here is if the path doesn't exist,
-        # instead of checking every time, assume it exists and catch the
-        # exception if it doesn't.
+        # instead of checking every time, assume it exists and catch the exception
+        # if it doesn't.
         nodes = ()
       members = self._zk_nodes_to_members(nodes)
       return (n for n in members)
@@ -352,20 +368,22 @@ class ServerSet(object):
 
   def _safe_zk_node_to_member(self, node):
     try:
-      return Member.from_node(node, self._get_info(node))
+      return self._member_factory(node, self._get_info(node))
     except NoNodeError:
       # Its possible for the ZK node to be removed between getting it
       # from the list and querying it, if so, just skip it.
       return None
 
   def _zk_nodes_to_members(self, nodes):
-    return [m for m in (self._safe_zk_node_to_member(n) for n in nodes) if m]
+    return [m for m in (self._safe_zk_node_to_member(n) for n in nodes
+                        if self._member_filter(n))
+            if m]
 
   def _monitor(self):
     """Begins watching the ZK path for node changes.
     """
     if not self._zk.exists(self._zk_path):
-      LOG.warn('Path %s does not exist, waiting for it to be created.'
+      self._log.warn('Path %s does not exist, waiting for it to be created.'
                % self._zk_path)
 
     # Data changed will notify node on creation / deletion via
@@ -381,7 +399,7 @@ class ServerSet(object):
       self._begin_watch()
 
   def _begin_watch(self):
-    LOG.info('Beginning to watch path %s' % self._zk_path)
+    self._log.info('Beginning to watch path %s' % self._zk_path)
     ChildrenWatch(self._zk, self._zk_path, self._on_set_changed)
 
   def _send_all_removed(self):
@@ -403,8 +421,7 @@ class ServerSet(object):
         new_members = self._zk_nodes_to_members(new_nodes)
         self._members.update(((m.name, m) for m in new_members))
 
-        LOG.debug("Raising notifications for %i members joining and %i members"
-                  " leaving."
+        self._log.debug("Raising notifications for %i members joining and %i members leaving."
                  % (len(new_nodes), len(removed_nodes)))
 
         for m in removed_nodes:
@@ -413,30 +430,30 @@ class ServerSet(object):
             try:
               self._on_leave(removed_member)
             except Exception:
-              LOG.exception('Error in OnLeave callback.')
+              self._log.exception('Error in OnLeave callback.')
           else:
-            LOG.warn('Member %s was not found in cached set' % str(m))
+            self._log.warn('Member %s was not found in cached set' % str(m))
 
         for m in new_members:
           try:
             self._on_join(m)
           except Exception:
-            LOG.exception('Error in OnJoin callback.')
+            self._log.exception('Error in OnJoin callback.')
+
       except Exception:
-        LOG.exception('Error in notification worker.')
+        self._log.exception('Error in notification worker.')
 
   def _on_set_changed(self, children):
     """Called when the children of the watched ZK node change.
-    Offloads most work to a greenlet worker thread to do the actual
-    notification.
+    Offloads most work to a greenlet worker thread to do the actual notificaiton.
 
     Args:
       children - The new set of child nodes.
     """
-    children = set(children)
+    children = set([c for c in children if self._member_filter(c)])
     current_nodes = set(self._nodes)
     self._nodes = children
     new_nodes = children - current_nodes
     removed_nodes = current_nodes - children
-    LOG.debug("Queueing notifications")
+    self._log.debug("Queueing notifications")
     self._notification_queue.put((new_nodes, removed_nodes))
