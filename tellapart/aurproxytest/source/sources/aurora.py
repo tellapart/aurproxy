@@ -27,7 +27,7 @@ from kazoo.retry import KazooRetry
 import mox
 import unittest
 
-from tellapart.aurproxy.source.sources import aurora
+from tellapart.aurproxy.source.sources import serverset
 
 TEST_PATH = '/test/path'
 TEST_NODE = 'member_0001'
@@ -67,7 +67,7 @@ class ZooKeeperTestCase(mox.MoxTestBase):
 
     self.mox.ReplayAll()
 
-    ss = aurora.ServerSet(zk, TEST_PATH, None, None)
+    ss = serverset.ServerSet(zk, TEST_PATH, None, None)
     members = ss.get_members()
 
     self.assertEqual(0, len(members))
@@ -102,7 +102,7 @@ class ZooKeeperTestCase(mox.MoxTestBase):
       .AndReturn([TEST_NODE_2])
 
     self.mox.ReplayAll()
-    aurora.ServerSet(zk, TEST_PATH, on_join, on_leave)
+    serverset.ServerSet(zk, TEST_PATH, on_join, on_leave)
     gevent.sleep(0)
     self.assertEqual(len(nodes), 1)
     gevent.sleep(0)
@@ -147,7 +147,7 @@ class ZooKeeperTestCase(mox.MoxTestBase):
     zk.get(TEST_NODE_2_PATH).AndReturn((TEST_NODE_2_DATA,))
 
     self.mox.ReplayAll()
-    ss = aurora.ServerSet(zk, TEST_PATH, noop, noop)
+    ss = serverset.ServerSet(zk, TEST_PATH, noop, noop)
     gevent.sleep(0)
     gevent.sleep(0)
 
