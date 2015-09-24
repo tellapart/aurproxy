@@ -80,12 +80,14 @@ http {
     }
     {%- endif %}
     {% for route in server.routes %}
+    {% if route.endpoints %}
     upstream {{ server.slug }}{{ route.slug }} {
         least_conn;
         {% for endpoint in route.endpoints %}{% if not endpoint.weight %}#{% endif %}server {{ endpoint.host }}:{{ endpoint.port }} weight={{ endpoint.weight }}; # {{ endpoint.audit.render() }}
         {% endfor %}
         keepalive 512;
     }
+    {% endif %}
     {%- endfor %}
 
     server {
@@ -126,8 +128,14 @@ http {
         {% for route in server.routes %}
         {% for location in route.locations %}
         location {{location}} {
+            {% if route.endpoints %}
             proxy_next_upstream off;
             proxy_pass http://{{ server.slug }}{{ route.slug }};
+            {% else %}
+            # No endpoints found for {{ server.slug }}{{ route.slug }}
+            access_log on;
+            return {{ route.empty_endpoint_status_code }};
+            {% endif %}
         }
         {%- endfor %}
         {%- endfor %}
