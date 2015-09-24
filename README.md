@@ -327,6 +327,9 @@ Sentry.
 ### ProxyRoute
 - **locations:** Required list with one or more HTTP routes (EG: ["/"])
 - **sources:** Required list with one or more ProxySource dictionaries
+- **empty_endpoint_status_code:** Optional status code to return if there are
+  no available endpoints. Defaults to 503 (Service Unavailable) if not
+  specified.
 - **overflow_sources:** Optional list of one or more ProxySource dictionaries
 - **overflow\_threshold\_pct:** Optional threshold past which traffic will be
   sent to overflow_source.
