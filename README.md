@@ -297,6 +297,15 @@ Aurproxy supports recording:
         --metric-publisher-arg=api_user={{librato_user}} \
         --metric-publisher-arg=api_token={{librato_token}}
 
+- OpenTSDB
+
+        --metric-publisher-class=aurproxy.metrics.publisher.OpenTSDBMetricPublisher \
+        --metric-publisher-arg=source={{cluster}}.{{role}}.{{environment}}.{{job}} \
+        --metric-publisher-arg=period=60 \
+        --metric-publisher-arg=prefix=apps. \
+        --metric-publisher-arg=host=localhost \
+        --metric-publisher-arg=port=4242
+
 
 ### Log Aggregation
 Currently, the only log aggregation implementation is Sentry. If you pass a
