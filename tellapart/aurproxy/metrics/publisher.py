@@ -209,7 +209,7 @@ class OpenTSDBMetricPublisher(MetricPublisher):
           request = "put %s%s%s %d %f host=%s pid=%s" % (self._prefix, self._source, metric.name, ts, metric.value(),
                                                          self.hostname(), os.getpid())
           logger.debug('Publishing: %s' % (request))
-          sock.send(request + "\n")
+          sock.sendall(request + "\n")
       sock.close()
     except Exception:
       logger.exception('Failed to publish metrics to OpenTSDB!')
