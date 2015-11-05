@@ -163,3 +163,53 @@ class LibratoMetricPublisher(MetricPublisher):
       queue.submit()
     except Exception:
       logger.exception('Failed to publish metrics to Librato!')
+
+class OpenTSDBMetricPublisher(MetricPublisher):
+  """Implementation of a MetricPublisher that publishes to OpenTSDB.
+  """
+  def __init__(self, prefix, host, port, source, period=60,
+               flush_engine=ThreadFlushEngine):
+    """
+    Args:
+      host - hostname.
+      port - host port.
+      source - The identifier to use as the source of the data when publishing.
+      period - The period in seconds at which to publish metrics.
+      flush_engine - The type or instance of a FlushEngine used to schedule
+                     publication.
+    """
+    self._prefix = prefix
+    self._host = host
+    self._port = port
+
+    super(OpenTSDBMetricPublisher, self).__init__(source, period, flush_engine)
+
+  def hostname(self):
+    import socket
+    return socket.gethostname()
+
+  def publish(self):
+    import os
+    import time
+    import struct
+    from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, SO_LINGER
+
+    """Override of base method.
+    """
+    try:
+      logger.info('Publishing metrics to OpenTSDB.')
+      sock = socket(AF_INET, SOCK_STREAM)
+      sock.settimeout(3)
+      sock.connect((self._host, self._port))
+      sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+      sock.setsockopt(SOL_SOCKET, SO_LINGER, struct.pack('ii', 1, 0))
+      ts = int(time.time())
+      for store in self._metric_stores:
+        for metric in store.get_metrics():
+          request = "put %s%s%s %d %f host=%s pid=%s" % (self._prefix, self._source, metric.name, ts, metric.value(),
+                                                         self.hostname(), os.getpid())
+          logger.debug('Publishing: %s' % (request))
+          sock.sendall(request + "\n")
+      sock.close()
+    except Exception:
+      logger.exception('Failed to publish metrics to OpenTSDB!')

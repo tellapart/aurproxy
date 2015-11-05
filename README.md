@@ -247,7 +247,7 @@ triggered (if configured).
 
         --registration-arg=region=us-east-1
         --registration-arg=elb_names=MyElb
-        --registration-class=aurproxy.register.elb.ElbSelfRegisterer
+        --registration-class=tellapart.aurproxy.register.elb.ElbSelfRegisterer
 
 - Route53
 
@@ -255,7 +255,7 @@ triggered (if configured).
         --registration-arg=domain=myproxy.mydomain.com
         --registration-arg=hosted_zone_id={{hosted_zone}}
         --registration-arg=ttl=60
-        --registration-class=aurproxy.register.route53.Route53SelfRegisterer
+        --registration-class=tellapart.aurproxy.register.route53.Route53SelfRegisterer
 
 #### Synchronization
 Synchronization refers to a way to run a registration plugin as an
@@ -270,7 +270,7 @@ o supported systems (EG: other load balancers or DNS).
         cd /opt/aurproxy && python -m "aurproxy.command" synchronize \
         --registration-arg=region=us-east-1 \
         --registration-arg=elb_names=MyElb \
-        --registration-class=aurproxy.register.elb.ElbJobRegisterer
+        --registration-class=tellapart.aurproxy.register.elb.ElbJobRegisterer
 
 - Route53
 
@@ -279,7 +279,7 @@ o supported systems (EG: other load balancers or DNS).
         --registration-arg=domain=myproxy.mydomain.com \
         --registration-arg=hosted_zone_id={{hosted_zone}} \
         --registration-arg=ttl=60 \
-        --registration-class=aurproxy.register.route53.Route53JobRegisterer
+        --registration-class=tellapart.aurproxy.register.route53.Route53JobRegisterer
 
 
 ### Metrics
@@ -291,11 +291,20 @@ Aurproxy supports recording:
 ### Metrics Implementations
 - Librato
 
-        --metric-publisher-class=aurproxy.metrics.publisher.LibratoMetricPublisher \
+        --metric-publisher-class=tellapart.aurproxy.metrics.publisher.LibratoMetricPublisher \
         --metric-publisher-arg=source={{cluster}}.{{role}}.{{environment}}.{{job}} \
         --metric-publisher-arg=period=60 \
         --metric-publisher-arg=api_user={{librato_user}} \
         --metric-publisher-arg=api_token={{librato_token}}
+
+- OpenTSDB
+
+        --metric-publisher-class=tellapart.aurproxy.metrics.publisher.OpenTSDBMetricPublisher \
+        --metric-publisher-arg=source={{cluster}}.{{role}}.{{environment}}.{{job}} \
+        --metric-publisher-arg=period=60 \
+        --metric-publisher-arg=prefix=apps. \
+        --metric-publisher-arg=host=localhost \
+        --metric-publisher-arg=port=4242
 
 
 ### Log Aggregation
@@ -342,11 +351,11 @@ Sentry.
 
 ### ProxySource (Base)
 - **source_class:** Python class path for source type.
-  EG: aurproxy.source.AuroraSource
+  EG: tellapart.aurproxy.source.AuroraSource
 - **share_adjusters:** Optional list of ShareAdjuster dictionaries.
 
 ### AuroraSource
-- **source_class:** 'aurproxy.source.AuroraSource'
+- **source_class:** 'tellapart.aurproxy.source.AuroraSource'
 - **role:** Required Aurora job role string
 - **environment:** Required Aurora job environment string
 - **job:** Required Aurora job name string
@@ -357,14 +366,14 @@ Sentry.
 - **share_adjusters:** Optional list of ShareAdjuster dictionaries.
 
 ### StaticSource
-- **source_class:** 'aurproxy.source.StaticSource'
+- **source_class:** 'tellapart.aurproxy.source.StaticSource'
 - **name:** Required name of static source (EG: 'devnull')
 - **host:** Required host for static endpoint (EG: '127.0.0.1')
 - **port:** Required port for static endpoint (EG: 12345)
 - **share_adjusters:** Optional list of ShareAdjuster dictionaries.
 
 ### ApiSource
-- **source_class:** 'aurproxy.source.ApiSource'
+- **source_class:** 'tellapart.aurproxy.source.ApiSource'
 - **name:** Required name of static source (EG: 'replay')
 - **source_whitelist:** Optional list(str) of source class paths that are
   allowed to be created under ApiSource.
@@ -373,7 +382,7 @@ Sentry.
 - **share_adjuster_class:** Required python class path for share adjuster type.
 
 ### RampingShareAdjuster
-- **share_adjuster_class:** 'aurproxy.share.adjusters.RampingShareAdjuster'
+- **share_adjuster_class:** 'tellapart.aurproxy.share.adjusters.RampingShareAdjuster'
 - **ramp_delay:** Required, number of seconds before starting to ramp traffic
   up. (EG: 90)
 - **ramp_seconds:** Required, number of seconds over which to ramp traffic up.
@@ -384,7 +393,7 @@ Sentry.
   only supports "linear".
 
 ### HttpHealthCheckShareAdjuster
-- **share_adjuster_class:** 'aurproxy.share.adjusters.HttpHealthCheckShareAdjuster'
+- **share_adjuster_class:** 'tellapart.aurproxy.share.adjusters.HttpHealthCheckShareAdjuster'
 - **route:** Route to healthcheck. (EG: '/health')
 - **interval:** Number of seconds between checks. (EG: 3)
 - **timeout:** Number of seconds after which to time out a check. (EG: 2)
@@ -410,7 +419,7 @@ values (EG: "default_server": True)
 
     import json
 
-    cmd = 'cd /opt/aurproxy && python -m "aurproxy.command" run ' \
+    cmd = 'cd /opt/aurproxy && python -m "tellapart.aurproxy.command" run ' \
           '--setup --management-port=31325 --max-update-frequency=10 ' \
           '--update-period=2 --sentry-dsn='' --config \''
     config = {
@@ -428,17 +437,17 @@ values (EG: "default_server": True)
                                               "1.zk.mycluster.mydomain.com:2181,"
                                               "2.zk.mycluster.mydomain.com:2181",
                                 "role": "myrole",
-                                "source_class": "aurproxy.source.AuroraProxySource",
+                                "source_class": "tellapart.aurproxy.source.AuroraProxySource",
                                 "share_adjusters": [
                                     {
-                                        "share_adjuster_class": "aurproxy.share.adjusters.RampingShareAdjuster",
+                                        "share_adjuster_class": "tellapart.aurproxy.share.adjusters.RampingShareAdjuster",
                                         "ramp_seconds": 60,
                                         "ramp_delay": 10,
                                         "update_frequency": 10,
                                         "curve": "linear"
                                     },
                                     {
-                                        "share_adjuster_class": "aurproxy.share.adjusters.HttpHealthCheckShareAdjuster",
+                                        "share_adjuster_class": "tellapart.aurproxy.share.adjusters.HttpHealthCheckShareAdjuster",
                                         "route": "/health",
                                         "interval": 3,
                                         "timeout": 2,
