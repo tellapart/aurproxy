@@ -23,6 +23,7 @@ http {
     keepalive_requests 100000;
     reset_timedout_connection on;
     client_body_timeout 10;
+    client_max_body_size {{ context.client_max_body_size or 1M }};
     send_timeout 2;
     tcp_nodelay on;
 
