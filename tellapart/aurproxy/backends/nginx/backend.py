@@ -56,6 +56,10 @@ class NginxProxyBackend(ProxyBackend):
                                               config,
                                               default=None,
                                               required=False)
+    self._nginx_pid_path = self._load_config_item('nginx_pid_path',
+                                              config,
+                                              default='/var/run/nginx.pid',
+                                              required=False)
     if self._stats_port:
       self._metrics_publisher = NginxProxyMetricsPublisher(self._stats_port)
     else:
@@ -89,7 +93,7 @@ class NginxProxyBackend(ProxyBackend):
     return context
 
   def restart(self):
-    run_local('kill -HUP $( cat /var/run/nginx.pid )')
+    run_local('kill -HUP $( cat {0} )'.format(self._nginx_pid_path))
 
   def update(self, restart_proxy):
     context = self._generate_context()
