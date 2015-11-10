@@ -56,7 +56,7 @@ class NginxProxyBackend(ProxyBackend):
                                               config,
                                               default=None,
                                               required=False)
-    self._nginx_pid_path = self._load_config_item('nginx-pid-path',
+    self._nginx_pid_path = self._load_config_item('nginx_pid_path',
                                               config,
                                               default='/var/run/nginx.pid',
                                               required=False)
