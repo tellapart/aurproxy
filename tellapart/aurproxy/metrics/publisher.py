@@ -206,7 +206,7 @@ class OpenTSDBMetricPublisher(MetricPublisher):
       ts = int(time.time())
       for store in self._metric_stores:
         for metric in store.get_metrics():
-          request = "put %s%s%s %d %f host=%s pid=%s" % (self._prefix, self._source, metric.name, ts, metric.value(),
+          request = "put %s%s%s %d %f host=%s pid=%d" % (self._prefix, self._source, metric.name, ts, metric.value(),
                                                          self.hostname(), os.getpid())
           logger.debug('Publishing: %s' % (request))
           sock.sendall(request + "\n")
