@@ -1,6 +1,6 @@
 user www-data;
 worker_processes {{ context.worker_processes or 16 }};
-pid {{ nginx_pid_path or /var/run/nginx.pid}};
+pid {{ nginx_pid_path or "/var/run/nginx.pid" }};
 daemon off;
 
 events {
