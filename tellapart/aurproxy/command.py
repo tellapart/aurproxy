@@ -85,8 +85,8 @@ def run(management_port,
   Args:
     management_port - int - port for the manager application to listen on for
       Aurora lifecycle queries and events (/health, /quitquit, etc.).
-    config - JSON String - Load balancer configuration. See README.md for
-      detailed documentation.
+    config - JSON String or file:// location of a JSON document - Load balancer
+      configuration. See README.md for detailed documentation.
     backend - Load balancer manager backend to use. EG: "nginx".
     update_period - int - frequency with which the need to update is checked.
     max_update_frequency - int - minimum number of seconds between updates.
@@ -123,14 +123,20 @@ def run(management_port,
 
   # Load config
   try:
-    proxy_config = json.loads(config)
+    if config.startswith('file://'):
+      with open(config.split('file://', 1)[1]) as config_fh:
+        proxy_config = json.load(config_fh)
+    else:
+      proxy_config = json.loads(config)
   except (TypeError, ValueError):
     raise commandr.CommandrUsageError('Invalid JSON configuration specified via --config')
+  except IOError as err:
+    raise commandr.CommandrUsageError('Failed to read --config file: %s' % err)
 
   # Set up updater
   try:
     proxy_updater = ProxyUpdater(backend, proxy_config, update_period,
-                               max_update_frequency)
+                                 max_update_frequency)
   except AurProxyConfigException as exc:
     raise commandr.CommandrUsageError(
       'Invalid configuration: {}'.format(str(exc)),
