@@ -77,7 +77,8 @@ class NginxProxyBackend(ProxyBackend):
   def _generate_context(self):
 
     context = {'context': self._context,
-               'stats_port': self._stats_port}
+               'stats_port': self._stats_port,
+               'nginx_pid_path': self._nginx_pid_path}
 
     context['http_servers'] = []
     context['stream_servers'] = []
