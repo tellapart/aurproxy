@@ -82,7 +82,9 @@ class AwsRegisterer(BaseRegisterer):
       The value corresponding to identifier.
     """
     url = _AWS_METADATA_URI.format(identifier)
-    return requests.get(url, timeout=2).content
+    session = requests.Session()
+    session.trust_env = False  # Ignore http_proxy setting for this
+    return session.get(url, timeout=2).content
 
   def get_instance_ids(self, hosts):
     """Given a list of EC2 hosts, get a list of EC2 instance ids.
