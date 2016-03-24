@@ -3,13 +3,12 @@
 aurproxy is a load balancer manager with knowledge of
 [Apache Aurora's](http://aurora.incubator.apache.org/) service discovery
 mechanism and integration with Aurora's task lifecycle. It is a python
-application that runs inside of a docker container, where it manages a fully
-featured but not Aurora-aware load balancer (currently only nginx is
-supported). When Aurora service discovery events occur, aurproxy detects them,
-rewrites the load balancer's configuration file and then triggers a graceful
-restart of the load balancer. Use aurproxy to expose dynamic Aurora service
-endpoints to services and applications that don't have knowledge of Aurora's
-service discovery mechanism.
+application that manages a fully featured but not Aurora-aware load balancer
+(currently only nginx is supported). When Aurora service discovery events
+occur, aurproxy detects them, rewrites the load balancer's configuration
+file and then triggers a graceful restart of the load balancer. Use aurproxy
+to expose dynamic Aurora service endpoints to services and applications that
+don't have knowledge of Aurora's service discovery mechanism.
 
 
 ## Features
