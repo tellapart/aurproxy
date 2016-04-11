@@ -192,16 +192,17 @@ class OpenTSDBMetricPublisher(MetricPublisher):
     import os
     import time
     import struct
-    from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, SO_LINGER
+    from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, SO_LINGER, IPPROTO_TCP, TCP_NODELAY
 
     """Override of base method.
     """
     try:
-      logger.info('Publishing metrics to OpenTSDB.')
+      logger.debug('Publishing metrics to OpenTSDB.')
       sock = socket(AF_INET, SOCK_STREAM)
       sock.settimeout(3)
       sock.connect((self._host, self._port))
       sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+      sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
       sock.setsockopt(SOL_SOCKET, SO_LINGER, struct.pack('ii', 1, 0))
       ts = int(time.time())
       for store in self._metric_stores:
