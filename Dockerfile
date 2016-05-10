@@ -14,8 +14,8 @@ RUN apt-get update
 # Install python prerequisites
 RUN apt-get install -y python-pip python-dev build-essential
 
-# Install go
-RUN apt-get install -y golang
+# Install go & libpcap
+RUN apt-get install -y golang libpcap-dev
 
 # Install gor
 ENV GOPATH=/opt/go
