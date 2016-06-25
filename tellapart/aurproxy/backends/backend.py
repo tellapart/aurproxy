@@ -72,7 +72,7 @@ class ProxyBackend(object):
 
   def _load_proxy_server(self, server):
     hosts = self._load_config_item('hosts', server, required=False)
-    ports = [ int(s) for s in
+    ports = [ str(s) for s in
               self._load_config_item('ports', server, required=True)]
     healthcheck_route = self._load_config_item('healthcheck_route',
                                                server,
