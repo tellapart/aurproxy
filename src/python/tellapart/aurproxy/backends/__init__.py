@@ -14,5 +14,7 @@
 
 from .backend import ProxyBackend, ProxyBackendProvider
 from .nginx import NginxProxyBackend
+from .null import NullProxyBackend
 
 ProxyBackendProvider.register(NginxProxyBackend)
+ProxyBackendProvider.register(NullProxyBackend)

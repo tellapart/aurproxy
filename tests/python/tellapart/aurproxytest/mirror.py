@@ -39,7 +39,7 @@ class MirrorUpdaterTests(unittest.TestCase):
       "port": 80
     })
 
-    template_path = '../templates/gor/mirror.sh.template'
+    template_path = 'templates/gor/mirror.sh.template'
 
     # Load up a mirror updater
     mirror_updater = load_mirror_updater(source=static_source_config,
@@ -57,7 +57,7 @@ class MirrorUpdaterTests(unittest.TestCase):
 
     # Correct the template path for test time
     template_path = os.path.join(os.path.dirname(__file__),
-                                 '../../templates/gor/mirror.sh.template')
+                                 '../../../../templates/gor/mirror.sh.template')
     mirror_updater._template_path = template_path
 
     # Check that update signals flow correctly through to command

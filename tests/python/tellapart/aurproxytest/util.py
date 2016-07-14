@@ -104,7 +104,7 @@ class _TstRegisterer(BaseRegisterer):
 
 class LoadRegistrationPluginTests(unittest.TestCase):
   def test_load_registration_plugin(self):
-    plugin_python_path = 'tellapart.aurproxytest.util._TstRegisterer'
+    plugin_python_path = 'tellapart.aurproxy.util._TstRegisterer'
     cli_kwargs = ['a=1', 'b=2']
     instance = load_registration_plugin(plugin_python_path, *cli_kwargs)
     self.assertEqual(instance._a, '1')
