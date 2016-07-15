@@ -14,10 +14,17 @@ RUN apt-get update
 # Install python prerequisites
 RUN apt-get install -y python-pip python-dev build-essential
 
-# Install go & libpcap
-RUN apt-get install -y golang libpcap-dev
+# Install libpcap
+RUN apt-get install -y libpcap-dev
+
+# Install go
+RUN echo 'e40c36ae71756198478624ed1bb4ce17597b3c19d243f3f0899bb5740d56212a go1.6.2.linux-amd64.tar.gz' >go.sha256sum \
+ && curl -s -L -o go1.6.2.linux-amd64.tar.gz https://storage.googleapis.com/golang/go1.6.2.linux-amd64.tar.gz \
+ && sha256sum -c go.sha256sum \
+ && tar -C /usr/local -xzf go1.6.2.linux-amd64.tar.gz
 
 # Install gor
+ENV PATH=$PATH:/usr/local/go/bin
 ENV GOPATH=/opt/go
 RUN mkdir -p $GOPATH \
  && go get github.com/buger/gor \
