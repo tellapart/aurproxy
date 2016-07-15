@@ -31,6 +31,10 @@ RUN mkdir -p $GOPATH \
  && cd $GOPATH/src/github.com/buger/gor \
  && go build
 
+# Aurora/Mesos requirements (see AURORA-1487)
+RUN apt-get update \
+ && apt-get install -y libcurl4-nss-dev libapr1-dev libsvn-dev
+
 # Install nginx
 ENV NGX_REQS openssl libssl1.0.0 libxml2 libxslt1.1 libgeoip1 libpcre3 zlib1g
 RUN apt-get update \
