@@ -17,6 +17,8 @@
 
 __copyright__ = 'Copyright (C) 2015 TellApart, Inc. All Rights Reserved.'
 
+import socket
+
 import boto.ec2
 import boto.ec2.elb
 import boto.route53
@@ -30,14 +32,17 @@ _AWS_METADATA_URI = 'http://169.254.169.254/latest/meta-data/{0}'
 class AwsRegisterer(BaseRegisterer):
   """Common code for AWS Registerers.
   """
-  def __init__(self, region, access_key=None, secret_key=None):
+  def __init__(self, region, query_by_ip=False, access_key=None, secret_key=None):
     """
     Args:
       region - str - AWS region (EG: 'us-east-1').
+      query_by_ip - bool - If true, resolves the hostname and uses the IP find instances
+                           rather than the hostname.
       access_key - str - Optional AWS access key.
       secret_key - str - Optional AWS secret key.
     """
     self._region = region
+    self._query_by_ip = query_by_ip
     self._access_key = access_key
     self._secret_key = secret_key
 
@@ -106,7 +111,15 @@ class AwsRegisterer(BaseRegisterer):
     Returns:
       An EC2 instance id.
     """
-    filters = {'dns-name': hostname}
+    if self._query_by_ip:
+      addr_info = socket.getaddrinfo(hostname, None, socket.AF_INET, 0, socket.IPPROTO_TCP)
+      if addr_info:
+        ip_addr, port = addr_info[0][4]
+        filters = {'private-ip-address': ip_addr }
+      else:
+        raise Exception("Unable to resolve host %s", hostname)
+    else:
+      filters = {'dns-name': hostname}
     reservation = self.conn.ec2.get_all_instances(filters=filters)
     return reservation[0].instances[0].id
 

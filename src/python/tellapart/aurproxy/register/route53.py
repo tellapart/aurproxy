@@ -42,7 +42,7 @@ Route53Record = namedtuple('Route53Record', ('domain', 'hostname', 'ttl'))
 class BaseRoute53Registerer(AwsRegisterer):
   """Common code for Route53 Registerers.
   """
-  def __init__(self, domain, hosted_zone_id, region, ttl, access_key=None,
+  def __init__(self, domain, hosted_zone_id, region, ttl, query_by_ip=False, access_key=None,
                secret_key=None):
     """
     Args:
@@ -50,10 +50,12 @@ class BaseRoute53Registerer(AwsRegisterer):
       hosted_zone_id - str - The Hosted Zone ID for the domain.
       region - str - AWS region (EG: 'us-east-1').
       ttl - int - The TTL for the registration.
+      query_by_ip - bool - If true, resolves the hostname and uses the IP find instances
+                           rather than the hostname.
       access_key - str - Optional AWS access key.
       secret_key - str - Optional AWS secret key.
     """
-    super(BaseRoute53Registerer, self).__init__(region, access_key, secret_key)
+    super(BaseRoute53Registerer, self).__init__(region, query_by_ip, access_key, secret_key)
     self._domain = domain
     self._hosted_zone_id = hosted_zone_id
     self._ttl = int(ttl)

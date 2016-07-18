@@ -28,7 +28,7 @@ logger = get_logger(__name__)
 
 
 class BaseElbRegisterer(AwsRegisterer):
-  def __init__(self, elb_names, region, access_key=None, secret_key=None):
+  def __init__(self, elb_names, region, query_by_ip=False, access_key=None, secret_key=None):
     """
     Common code for ELB Registerers.
 
@@ -38,7 +38,7 @@ class BaseElbRegisterer(AwsRegisterer):
       access_key - str - Optional AWS access key.
       secret_key - str - Optional AWS secret key.
     """
-    super(BaseElbRegisterer, self).__init__(region, access_key, secret_key)
+    super(BaseElbRegisterer, self).__init__(region, query_by_ip, access_key, secret_key)
     self._elb_names = elb_names.split(',')
 
   @property
@@ -110,6 +110,7 @@ class ElbSelfRegisterer(BaseElbRegisterer):
 
 class ElbJobRegisterer(BaseElbRegisterer):
   def __init__(self, source, elb_names, region, remove_other_instances,
+               query_by_ip=False,
                access_key=None, secret_key=None,
                access_key_path=None, secret_key_path=None):
     """
@@ -142,7 +143,7 @@ class ElbJobRegisterer(BaseElbRegisterer):
 
     self._source = source
 
-    super(ElbJobRegisterer, self).__init__(elb_names, region,
+    super(ElbJobRegisterer, self).__init__(elb_names, region, query_by_ip,
                                            access_key, secret_key)
 
   def synchronize(self, write):
