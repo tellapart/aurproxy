@@ -231,7 +231,7 @@ signaling updates to a list of endpoints.
 1. **AuroraSource**, which watches Aurora's service discovery database in
    Zookeeper and whenever a ServiceInstance is added or removed, signals
    Aurproxy's ProxyUpdater that an update is required.
-2. **StaticSource**, which returns a single, statically configured endpoint.
+2. **StaticProxySource**, which returns a single, statically configured endpoint.
 
 ### Registration
 
@@ -364,8 +364,8 @@ Sentry.
   Service Discovery lives. Default: '/aurora/'
 - **share_adjusters:** Optional list of ShareAdjuster dictionaries.
 
-### StaticSource
-- **source_class:** 'tellapart.aurproxy.source.StaticSource'
+### StaticProxySource
+- **source_class:** 'tellapart.aurproxy.source.StaticProxySource'
 - **name:** Required name of static source (EG: 'devnull')
 - **host:** Required host for static endpoint (EG: '127.0.0.1')
 - **port:** Required port for static endpoint (EG: 12345)
