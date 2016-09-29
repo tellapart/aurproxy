@@ -16,7 +16,7 @@ import unittest
 
 from tellapart.aurproxy.source import StaticProxySource
 
-class StaticSourceTests(unittest.TestCase):
+class StaticProxySourceTests(unittest.TestCase):
   def test_static_source(self):
     name, host, port = 'localhost', '127.0.0.1', 8080
     def noop(): pass
